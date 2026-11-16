@@ -127,7 +127,8 @@ is known everywhere, so the reader can be compared with the right answer.
 ## Checking the model against real links
 
 What has been checked so far, and what was found, is written up in
-[docs/validation.md](docs/validation.md).
+[docs/validation.md](docs/validation.md). The short, plain version for users is
+the app's own page, [how.html](https://tf5nn.github.io/sightline/how.html).
 
 `batch.html` (not linked from the app) takes a pasted list of stations and the
 links measured between them, runs every pair through the same terrain and radio

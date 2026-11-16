@@ -206,6 +206,8 @@ def main():
             check(link_traces > bare_traces and page.is_visible("#legend-fresnel") and page.is_checked("#fresnel"),
                   f"{name}: opening the radio part shows the Fresnel zone")
             check(page.evaluate(amber_lines) > 0 and page.is_visible("#legend-grazing"), f"{name}: grazing stretches are amber on the map")
+            key_gap = page.evaluate("(() => { const e = document.getElementById('legend-grazing'); const k = e.querySelector('.key').getBoundingClientRect(); const r = document.createRange(); r.selectNodeContents(e.lastChild); return r.getBoundingClientRect().left - k.right; })()")
+            check(key_gap >= 4, f"{name}: legend keys stand clear of their labels ({key_gap:.0f} px)")
             page.screenshot(path=os.path.join(OUT, f"{name}-link.png"), full_page=True)
             page.uncheck("#fresnel")
             page.wait_for_function(f"{traces} < {link_traces}", timeout=5000)
@@ -346,6 +348,17 @@ def main():
                       f"{name}: the batch check works through every pair")
                 check("failed" not in report and "blocked" in report, f"{name}: the batch check finds the hill between the far ends")
                 open(os.path.join(OUT, "batch-report.txt"), "w").write(report)
+
+            # The "how it works" page opens from the app and fits the screen.
+            page.goto(url)
+            page.wait_for_function(status_is("^Done\\."), timeout=30000)
+            page.click("#about-open")
+            page.click("#about a[href='how.html']")
+            page.wait_for_selector("main.doc h2")
+            check("how far to trust it" in page.inner_text("main.doc h2"), f"{name}: the how-it-works page opens from About")
+            check(page.evaluate("document.documentElement.scrollWidth - document.documentElement.clientWidth") <= 0,
+                  f"{name}: the how-it-works page fits the screen")
+            page.screenshot(path=os.path.join(OUT, f"{name}-how.png"))
 
             # The test page runs against the same tiles.
             page.goto(f"{app}/step0.html?terrain={tiles}")

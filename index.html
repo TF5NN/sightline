@@ -50,10 +50,10 @@
         <div id="chart" class="chart" hidden></div>
         <p id="readout" class="readout" hidden></p>
         <p id="legend" class="legend" hidden>
-          <span class="key key-los"></span>Line of sight
-          <span class="key key-blocked"></span>Blocked
-          <span id="legend-grazing" hidden><span class="key key-grazing"></span>Grazing</span>
-          <span id="legend-fresnel" hidden><span class="key key-fresnel"></span>Fresnel zone</span>
+          <span class="entry"><span class="key key-los"></span>Line of sight</span>
+          <span class="entry"><span class="key key-blocked"></span>Blocked</span>
+          <span class="entry" id="legend-grazing" hidden><span class="key key-grazing"></span>Grazing</span>
+          <span class="entry" id="legend-fresnel" hidden><span class="key key-fresnel"></span>Fresnel zone</span>
           <span class="legend-note">Heights in metres, Earth's curve included</span>
         </p>
 
@@ -189,6 +189,7 @@
 
     <footer class="foot">
       Terrain: ArcticDEM, Polar Geospatial Center. Map: © OpenStreetMap contributors.
+      <a href="how.html">How it works and how far to trust it</a> ·
       <a href="step0.html">Data connection test</a> ·
       <a href="https://github.com/TF5NN/sightline" target="_blank" rel="noopener"
          data-goatcounter-click="github-from-sightline" data-goatcounter-title="Sightline: GitHub link">Source code</a> ·
@@ -252,6 +253,7 @@
         Map tiles © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors. Built
         with Leaflet, geotiff.js and Plotly. Made by <a href="https://tf5nn.github.io/" target="_blank" rel="noopener">TF5NN</a>.
       </p>
+      <p><a href="how.html">How it works and how far to trust it</a></p>
       <form method="dialog"><button class="primary">Close</button></form>
     </dialog>
 

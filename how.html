@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#214e3a" />
+    <title>Sightline: how it works and how far to trust it</title>
+    <meta name="description" content="How Sightline draws a terrain profile and estimates a radio link, and how its results have compared with real links." />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+    <header class="header">
+      <a href="./" class="brand" aria-label="Sightline home">
+        <span class="brand-icon">
+          <svg viewBox="0 0 36 36" aria-hidden="true" focusable="false">
+            <path class="fill" d="M4 28 13 14.5 17.5 21.25 24.25 10 32 28Z" />
+            <path d="M6 9 30 6.75" />
+          </svg>
+        </span>
+        <h1>SIGHTLINE<small>TERRAIN PROFILES FOR RADIO LINKS</small></h1>
+      </a>
+      <div class="header-right">
+        <a class="callsign" href="./">Back to the app</a>
+      </div>
+    </header>
+
+    <main class="doc">
+      <h2>How it works and how far to trust it</h2>
+      <p class="lede">
+        Sightline answers two questions about a path between two points: is there ground in the way, and would a radio
+        link probably work?
+      </p>
+
+      <div class="box">
+        <p><strong>The short version</strong></p>
+        <ul>
+          <li>When it says the ground blocks the path, believe it.</li>
+          <li>On a clear path, the estimate and real links agree as far as has been checked.</li>
+          <li>
+            On a blocked path in town it has been too optimistic. There, read Marginal or Good as "probably not".
+          </li>
+          <li>Read every margin as give or take 10 dB. It is a planning tool, not a promise.</li>
+        </ul>
+      </div>
+
+      <h3>Using it</h3>
+      <ol>
+        <li>Tap the map twice to place A and B. Drag a pin to move it.</li>
+        <li>The profile appears: the ground along the path and the straight line between the two antennas.</li>
+        <li>Set the antenna heights above the ground under the profile. A mast or a roof counts.</li>
+        <li>
+          Press "Estimate radio link" for the radio side: choose a band, a radio and an antenna. If the two ends
+          differ, tick "Different station at each end".
+        </li>
+        <li>The page address holds the whole setup. Copy it to share or save a path.</li>
+      </ol>
+      <p>On a phone, slide a finger along the profile to read the heights.</p>
+
+      <h3>Reading the profile</h3>
+      <table>
+        <tr>
+          <td><span class="swatch" style="background: #2f6fb7"></span>Line of sight</td>
+          <td>The straight line from antenna to antenna.</td>
+        </tr>
+        <tr>
+          <td><span class="swatch" style="background: #c0392b"></span>Blocked</td>
+          <td>The ground is above the line. A signal has to bend over it, and loses strength doing so.</td>
+        </tr>
+        <tr>
+          <td><span class="swatch" style="background: #d98a00"></span>Grazing</td>
+          <td>
+            The ground is below the line but close to it, inside 60% of the Fresnel zone. The signal is weakened
+            a little. Shown with the radio side open.
+          </td>
+        </tr>
+        <tr>
+          <td>Fresnel zone</td>
+          <td>
+            The space around the line that a radio signal actually uses. It is widest in the middle of the path and
+            wider on lower frequencies: halfway along a 20 km path it reaches about 100 m either side of the line at
+            145 MHz, and about 40 m at 868 MHz.
+          </td>
+        </tr>
+      </table>
+      <p>
+        The Earth's curve is built into the picture: the ground is drawn bulging up in the middle of a long path, so
+        the line of sight can stay straight. The bulge allows for the way the air normally bends radio waves slightly
+        downward, which makes the Earth seem a third larger than it is.
+      </p>
+      <p>
+        With a handheld at head height the ground at your feet is inside the Fresnel zone, so long stretches near the
+        antennas show as grazing on flat land. That is normal.
+      </p>
+
+      <h3>The radio estimate</h3>
+      <p>Sightline adds up a simple budget:</p>
+      <ul>
+        <li>what the transmitter puts out, plus both antennas, minus cable losses;</li>
+        <li>minus the loss from distance alone (free-space loss);</li>
+        <li>minus the loss from ground in the way (terrain loss).</li>
+      </ul>
+      <p>
+        What is left is the received signal. The margin is how far that is above the weakest signal the receiver can
+        use.
+      </p>
+      <table>
+        <tr><th>Margin</th><th>Verdict</th></tr>
+        <tr><td>20 dB or more</td><td>Solid</td></tr>
+        <tr><td>10 to 20 dB</td><td>Good</td></tr>
+        <tr><td>0 to 10 dB</td><td>Marginal: may work, may not</td></tr>
+        <tr><td>below 0 dB</td><td>Unlikely</td></tr>
+      </table>
+      <p>
+        Terrain loss is worked out two ways and the larger is used: bending over at most three ridges, one after the
+        other, and a standard single-ridge method (ITU-R P.526) with its allowance for the fact that real hills are
+        broad, not knife edges. With a different station at each end, both directions are worked out and the weaker
+        one is judged. For LoRa the receiver's limit follows from the spreading factor and bandwidth.
+      </p>
+
+      <h3>The terrain data</h3>
+      <ul>
+        <li>
+          Heights come from ArcticDEM, made from satellite images by the Polar Geospatial Center. It covers land
+          north of about 60°N. Sightline reads small pieces of it straight from the public archive when you place
+          your points.
+        </li>
+        <li>
+          It is a surface model: buildings and trees are part of the "ground", as they stood when the images were
+          taken. Glaciers, snow, new buildings and grown trees may differ today.
+        </li>
+        <li>
+          The whole path is read at 10 m detail. The finest 2 m data is added near both antennas and wherever the
+          ground comes close to the line of sight, which is where it changes the answer. "Advanced" has the choice of
+          2 m everywhere.
+        </li>
+        <li>
+          Where the archive has no data, such as open sea, the profile shows a gap and nothing is assumed to be in
+          the way there.
+        </li>
+      </ul>
+
+      <h3>What it does not know</h3>
+      <ul>
+        <li><strong>Radio noise.</strong> It assumes a quiet receiver. In a town the noise can cost 5 to 10 dB.</li>
+        <li>
+          <strong>Your real antenna.</strong> An antenna indoors, in a window or below the roof line can be 10 to
+          20 dB worse than the figure on the box.
+        </li>
+        <li><strong>Reflections</strong> off the sea, the ground or buildings, which can help or hurt.</li>
+        <li><strong>Weather.</strong> Unusual bending over the sea can carry a signal much further than expected.</li>
+        <li><strong>Many obstacles in a row</strong>, such as a town full of rooftops. It counts at most three.</li>
+        <li><strong>HF skywave.</strong> This is for line-of-sight bands: VHF, UHF and up.</li>
+      </ul>
+
+      <h3>How it has compared with real links</h3>
+      <p>Two checks so far, both in November 2026.</p>
+      <ul>
+        <li>
+          <strong>One 143 km path on the 2 m band, over a mountain.</strong> In real life a 5 W handheld with a
+          rubber duck opens the repeater but is unreadable, and a small yagi gets through. Sightline says Marginal and
+          Good. The model was adjusted once to get there.
+        </li>
+        <li>
+          <strong>Fourteen MeshCore repeaters in south-west Iceland, 91 pairs, 868 MHz.</strong> Every pair Sightline
+          called impossible had indeed never been heard (28 of 28), and 40 of 41 real links came out as workable.
+          On blocked links in town the predicted signal was about 16 dB stronger than measured. The stations' antennas
+          and heights had to be guessed for that check, and the guess is known to be wrong for some, so it will be
+          run again with real figures.
+        </li>
+      </ul>
+      <p>
+        The full write-up, with the method and its limits, is in
+        <a href="https://github.com/TF5NN/sightline/blob/main/docs/validation.md" target="_blank" rel="noopener">docs/validation.md</a>.
+        If you have a link you know well and Sightline gets it wrong, that is useful to hear:
+        <a href="https://github.com/TF5NN/sightline/issues" target="_blank" rel="noopener">open an issue on GitHub</a>
+        with the page address and what happens on the air.
+      </p>
+
+      <h3>Your data</h3>
+      <p>
+        Your points and settings stay in your browser and in the page address. Visits are counted anonymously with
+        GoatCounter, without cookies, and the points are never sent. More in the
+        <a href="https://github.com/TF5NN/sightline#data-and-privacy" target="_blank" rel="noopener">README</a>.
+      </p>
+    </main>
+
+    <footer class="foot">
+      <a href="./">Back to the app</a> ·
+      Terrain: ArcticDEM, Polar Geospatial Center ·
+      <a href="https://tf5nn.github.io/" target="_blank" rel="noopener">More from TF5NN</a>
+    </footer>
+    </div>
+    <script data-goatcounter="https://tf5nn.goatcounter.com/count" data-goatcounter-settings='{"path": "/sightline/how.html"}'
+            async src="https://gc.zgo.at/count.js"></script>
+  </body>
+</html>
