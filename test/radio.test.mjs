@@ -294,3 +294,24 @@ test('smart detail leaves wide Fresnel zones alone: a long VHF path only gets it
   const loraStretches = detailStretches({ distances: short.distances, path: lora.path, diffraction: lora.diffraction });
   assert.ok(loraStretches.some(([a, b]) => a < 10000 && b > 10000), JSON.stringify(loraStretches));
 });
+
+test('two different stations: the link is judged by the weaker direction', () => {
+  const { distances, ground } = flatPath(20000, 20);
+  const radio = {
+    freqMHz: 145.5, gainA: -3, gainB: 6, cableA: 0, cableB: 1.5, heightA: 200, heightB: 200, k: 1e9,
+    powerA: 5, sensA: -119, // a handheld
+    powerB: 50, sensB: -122, // a repeater that both shouts louder and hears better
+  };
+  const link = linkEstimate({ distances, ground, radio });
+  // Path loss socket to socket: 101.7 + 3 - 6 + 1.5 = 100.2 dB.
+  near(link.aToB.received, 36.99 - 100.2, 0.1);
+  near(link.aToB.margin, 36.99 - 100.2 + 122, 0.1);
+  near(link.bToA.received, 46.99 - 100.2, 0.1);
+  near(link.bToA.margin, 46.99 - 100.2 + 119, 0.1);
+  assert.equal(link.weaker, 'aToB'); // the handheld getting into the repeater is the hard part
+  assert.equal(link.margin, link.aToB.margin);
+  assert.equal(link.twoWayDiffers, true);
+  // Same station both ends: both directions agree.
+  const same = linkEstimate({ distances, ground, radio: { ...radio, powerB: 5, sensB: -119 } });
+  assert.equal(same.twoWayDiffers, false);
+});

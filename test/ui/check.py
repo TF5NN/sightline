@@ -109,18 +109,19 @@ def main():
             check("2 m data on" in status, f"{name}: 2 m detail loads from a link ({status})")
             check("filled from coarser data" in status, f"{name}: the hole is reported as filled")
             check(page.is_visible("#chart .main-svg"), f"{name}: the chart is drawn")
-            distance = page.inner_text("#r-distance")
-            check(distance.endswith("km") and 1.1 < float(distance.split()[0]) < 1.4, f"{name}: distance shown ({distance})")
 
-            # The link: a hill stands between the two points, so 2 m masts are blocked.
-            check(page.inner_text("#r-path") == "Blocked", f"{name}: default 2 m masts are blocked by the hill ({page.inner_text('#r-path')})")
-            check("edge" in page.inner_text("#r-diffraction"), f"{name}: terrain loss is reported ({page.inner_text('#r-diffraction')})")
-            check(page.inner_text("#r-verdict") in ("Solid", "Good", "Marginal", "Unlikely"), f"{name}: a verdict is shown ({page.inner_text('#r-verdict')}, margin {page.inner_text('#r-margin')})")
-            check("above the line of sight" in page.inner_text("#readout"), f"{name}: worst spot is described ({page.inner_text('#readout')})")
-            check("preset=meshcore" in page.url and "f=869.618" in page.url, f"{name}: radio settings are kept in the page address")
-            page.screenshot(path=os.path.join(OUT, f"{name}-blocked.png"), full_page=True)
+            # The opening view is bare: profile and line of sight, no verdict, no Fresnel zone.
+            traces = "document.getElementById('chart').data.length"
+            bare_traces = page.evaluate(traces)
+            check(page.is_hidden("#link-panel") and page.is_hidden("#r-verdict"), f"{name}: no link verdict in the opening view")
+            check(page.is_hidden("#legend-fresnel"), f"{name}: no Fresnel zone in the opening view")
+            check(page.is_visible("#height-a") and page.is_visible("#link-toggle"), f"{name}: antenna heights and the link button are there")
+            check("link=1" not in page.url and "fz=1" not in page.url, f"{name}: the bare view is what a shared link opens too")
+            blocked_lines = "Object.keys(sightline.map._layers).filter((k) => sightline.map._layers[k].options?.color === '#c0392b').length"
+            check(page.evaluate(blocked_lines) > 0, f"{name}: the blocked stretch is drawn red on the map")
+            page.screenshot(path=os.path.join(OUT, f"{name}-bare.png"), full_page=True)
 
-            # Hovering the chart shows the real ground height and the clearance.
+            # Hovering the chart shows the real ground height and where the ground is against the line of sight.
             page.locator("#chart").scroll_into_view_if_needed()
             box = page.locator("#chart .nsewdrag").bounding_box()
             page.mouse.move(box["x"] + box["width"] * 0.5, box["y"] + box["height"] * 0.5)
@@ -128,33 +129,105 @@ def main():
             readout = page.inner_text("#readout")
             ground = float(readout.split("ground ")[1].split(" m")[0])
             check(150 < ground < 400, f"{name}: hover readout, ground above sea level not above the ellipsoid ({readout})")
+            check("above the line of sight" in readout and "Fresnel" not in readout, f"{name}: the hill is above the line of sight, no Fresnel talk")
             page.mouse.move(5, 5)
+
+            # "Estimate radio link" opens the radio part, on the 2 m band with a 5 W handheld and rubber duck.
+            page.click("#link-toggle")
+            page.wait_for_selector("#link-panel", state="visible")
+            check(page.input_value("#band") == "2m" and page.input_value("#radio-a") == "ht5w" and page.input_value("#antenna-a") == "duck",
+                  f"{name}: opens on 2 m, 5 W handheld, rubber duck")
+            check(page.is_hidden("#radio-b") and page.is_hidden("#antenna-b"), f"{name}: one station choice while both ends are the same")
+            distance = page.inner_text("#r-distance")
+            check(distance.endswith("km") and 1.1 < float(distance.split()[0]) < 1.4, f"{name}: distance shown ({distance})")
+            check(page.inner_text("#r-diffraction") != "none", f"{name}: terrain loss is reported ({page.inner_text('#r-diffraction')})")
+            check(page.inner_text("#r-verdict") in ("Solid", "Good", "Marginal", "Unlikely"), f"{name}: a verdict is shown ({page.inner_text('#r-verdict')}, margin {page.inner_text('#r-margin')})")
+            check("link=1" in page.url and "band=2m" in page.url, f"{name}: the open panel and the band are kept in the page address")
+            check(page.inner_text("#link-toggle") == "Hide radio link", f"{name}: the button now hides the panel")
+
+            # The Fresnel zone is a switch, off until asked for.
+            check(page.evaluate(traces) == bare_traces, f"{name}: opening the panel does not add the Fresnel zone")
+            page.check("#fresnel")
+            page.wait_for_function(f"{traces} > {bare_traces}", timeout=5000)
+            check(page.is_visible("#legend-fresnel") and "fz=1" in page.url, f"{name}: the Fresnel zone can be switched on")
+            page.screenshot(path=os.path.join(OUT, f"{name}-link.png"), full_page=True)
+            page.uncheck("#fresnel")
+            page.wait_for_function(f"{traces} === {bare_traces}", timeout=5000)
 
             # Raising both masts clears the hill; the terrain loss goes away.
             margin_before = page.inner_text("#r-margin")
             page.fill("#height-a", "80")
             page.fill("#height-b", "80")
-            page.wait_for_function("document.getElementById('r-path').textContent === 'Clear'", timeout=15000)
-            check(page.inner_text("#r-diffraction") == "none", f"{name}: 80 m masts clear the hill (margin {margin_before} -> {page.inner_text('#r-margin')})")
+            page.wait_for_function("document.getElementById('r-diffraction').textContent === 'none'", timeout=15000)
+            check(page.evaluate(blocked_lines) == 0, f"{name}: 80 m masts clear the hill (margin {margin_before} -> {page.inner_text('#r-margin')})")
             page.screenshot(path=os.path.join(OUT, f"{name}-clear.png"), full_page=True)
 
-            # Changing the setup changes the sums: 2 m band has about 15.5 dB less free-space loss.
-            fsl_lora = float(page.inner_text("#r-fsl").split()[0])
-            page.select_option("#preset", "fm2m")
-            page.wait_for_function(f"parseFloat(document.getElementById('r-fsl').textContent) < {fsl_lora - 10}", timeout=15000)
+            # The band decides which radios and antennas are on offer.
+            options = lambda sel: page.eval_on_selector_all(f"{sel} option", "nodes => nodes.map((n) => n.value)")
+            check("meshcore" not in options("#radio-a") and "yagi3" in options("#antenna-a") and "yagi7" not in options("#antenna-a"),
+                  f"{name}: 2 m band offers 2 m radios and antennas only")
             fsl_vhf = float(page.inner_text("#r-fsl").split()[0])
-            check(abs((fsl_lora - fsl_vhf) - 15.5) < 0.3, f"{name}: switching to the 2 m band preset ({fsl_lora} -> {fsl_vhf} dB)")
-            check(page.is_hidden("#sf") and page.is_enabled("#sens"), f"{name}: LoRa boxes are hidden for an FM setup")
-            page.select_option("#power-unit", "dBm")
-            check(abs(float(page.input_value("#power")) - 37.0) < 0.05, f"{name}: 5 W shows as 37 dBm ({page.input_value('#power')})")
-            page.select_option("#preset", "meshcore")
-            page.wait_for_function("document.getElementById('sens').value === '-130'", timeout=5000)
+            page.select_option("#band", "lora868")
+            page.wait_for_function(f"parseFloat(document.getElementById('r-fsl').textContent) > {fsl_vhf + 10}", timeout=15000)
+            fsl_lora = float(page.inner_text("#r-fsl").split()[0])
+            check(abs((fsl_lora - fsl_vhf) - 15.5) < 0.3, f"{name}: switching to 868 MHz adds 15.5 dB of free-space loss ({fsl_vhf} -> {fsl_lora} dB)")
+            check(options("#radio-a") == ["meshcore", "meshtastic"] and "duck" not in options("#antenna-a"),
+                  f"{name}: 868 MHz offers the mesh radios and 868 antennas only")
+            check(page.input_value("#height-a") == "80", f"{name}: the antenna heights survive a band change")
+
+            # Advanced: the numbers behind the lists.
+            page.click("#advanced summary")
+            check(page.is_visible("#sf") and page.is_disabled("#sens-a"), f"{name}: LoRa boxes show for a LoRa radio")
+            check(page.input_value("#sens-a") == "-130", f"{name}: MeshCore narrow sensitivity is -130 dBm ({page.input_value('#sens-a')})")
             page.select_option("#sf", "12")
-            page.wait_for_function("document.getElementById('sens').value === '-140'", timeout=5000)
+            page.wait_for_function("document.getElementById('sens-a').value === '-140'", timeout=5000)
             check(True, f"{name}: spreading factor 12 moves the sensitivity to -140 dBm")
+            page.select_option("#radio-a", "meshtastic")
+            page.wait_for_function("document.getElementById('sf').value === '11'", timeout=5000)
+            check(page.input_value("#freq") == "869.525", f"{name}: picking a radio from the list puts its own figures back")
+            page.select_option("#band", "2m")
+            page.wait_for_function("document.getElementById('freq').value === '145.5'", timeout=5000)
+            check(page.is_hidden("#sf") and page.is_enabled("#sens-a"), f"{name}: LoRa boxes are hidden for an FM radio")
+            page.select_option("#power-unit", "dBm")
+            check(abs(float(page.input_value("#power-a")) - 37.0) < 0.05, f"{name}: 5 W shows as 37 dBm ({page.input_value('#power-a')})")
+            page.select_option("#power-unit", "W")
             page.fill("#freq", "-5")
             check("invalid" in (page.get_attribute("#freq", "class") or ""), f"{name}: an impossible frequency is flagged, not used")
-            page.fill("#freq", "869.618")
+            page.fill("#freq", "145.5")
+            page.wait_for_function(f"document.getElementById('r-fsl').textContent === '{fsl_vhf} dB'", timeout=15000)
+
+            # A different station at each end: a yagi at B only helps, and the weaker direction is the one judged.
+            margin_same = float(page.inner_text("#r-margin").split()[0].replace("−", "-"))
+            page.check("#split")
+            page.wait_for_selector("#radio-b", state="visible")
+            check(page.input_value("#antenna-b") == "duck" and page.inner_text("#radio-a-label") == "Radio at A",
+                  f"{name}: the split starts as a copy of A")
+            page.select_option("#antenna-b", "yagi3")
+            page.wait_for_function(f"parseFloat(document.getElementById('r-margin').textContent.replace('−', '-')) > {margin_same + 5}", timeout=15000)
+            margin_yagi = float(page.inner_text("#r-margin").split()[0].replace("−", "-"))
+            check(abs((margin_yagi - margin_same) - 9.5) < 0.2, f"{name}: a 3-element yagi at B is worth 9.5 dB over the duck ({margin_same} -> {margin_yagi})")
+            check("split=1" in page.url and "ab=yagi3" in page.url, f"{name}: the two stations are kept in the page address")
+            page.select_option("#radio-b", "mobile50w")
+            page.wait_for_function("document.getElementById('link-note').textContent.includes('weaker direction')", timeout=15000)
+            check("A to B" in page.inner_text("#link-note"), f"{name}: 5 W into 50 W is judged on the 5 W direction ({page.inner_text('#link-note')})")
+            page.click("#swap")
+            page.wait_for_function(status_is("^Done\\."), timeout=30000)
+            check(page.input_value("#radio-a") == "mobile50w" and page.input_value("#antenna-a") == "yagi3" and page.input_value("#antenna-b") == "duck",
+                  f"{name}: Swap takes each station with its point")
+            page.uncheck("#split")
+            page.wait_for_selector("#radio-b", state="hidden")
+            check(True, f"{name}: switching the split off ties both ends together again")
+            page.wait_for_function("!document.getElementById('link-note').textContent.includes('weaker direction')", timeout=15000)
+
+            # Links shared from the earlier version still open, with the same numbers and the panel showing.
+            old = f"{app}/index.html?terrain={tiles}#a={a['lat']:.5f},{a['lon']:.5f}&b={b['lat']:.5f},{b['lon']:.5f}&preset=meshcore&f=869.618&p=0.158&ha=2&hb=2&ga=2&gb=2&ca=0&cb=0&sf=8&bw=62.5"
+            page.goto(old)
+            page.reload()
+            page.wait_for_function(status_is("^Done\\."), timeout=30000)
+            check(page.is_visible("#link-panel") and page.is_visible("#legend-fresnel"), f"{name}: an old shared link opens with the link panel and Fresnel zone")
+            check(page.input_value("#band") == "lora868" and page.input_value("#radio-a") == "meshcore" and page.input_value("#freq") == "869.618"
+                  and page.input_value("#gain-a") == "2" and page.input_value("#sens-a") == "-130",
+                  f"{name}: an old shared link keeps its numbers")
 
             # The 2 m detail must still load when the pointer is resting on the draft chart.
             # (A real bug: while redrawing, the chart re-sent a "hover" to a listener that
@@ -173,6 +246,7 @@ def main():
             check(status.startswith("Done."), f"{name}: detail loads with the pointer on the draft chart ({status})")
 
             # Terrain detail choices under Advanced.
+            page.click("#link-toggle")
             page.click("#advanced summary")
             page.select_option("#detail", "10m")
             page.wait_for_function(status_is("^Done, on 10 m data only"), timeout=15000)
@@ -187,6 +261,7 @@ def main():
             page.click("#clear")
             check(page.is_hidden("#chart"), f"{name}: Clear removes the profile")
             page.evaluate("sightline.map.setView([62, -30], 9, { animate: false })")  # open ocean
+            page.locator("#map").scroll_into_view_if_needed()
             mbox = page.locator("#map").bounding_box()
             page.mouse.click(mbox["x"] + mbox["width"] * 0.3, mbox["y"] + mbox["height"] * 0.4)
             page.mouse.click(mbox["x"] + mbox["width"] * 0.7, mbox["y"] + mbox["height"] * 0.6)

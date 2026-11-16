@@ -269,8 +269,10 @@ export function verdictFor(marginDb) {
  * The whole link estimate for one hop.
  *
  * radio = {
- *   freqMHz, powerW, gainA, gainB (dBi), cableA, cableB (dB),
- *   heightA, heightB (antenna height above ground, m), sensitivity (dBm), k
+ *   freqMHz, gainA, gainB (dBi), cableA, cableB (dB),
+ *   heightA, heightB (antenna height above ground, m), k,
+ *   powerA, powerB (W) and sensA, sensB (dBm) for the two ends,
+ *   or just powerW and sensitivity when both ends are the same
  * }
  */
 export function linkEstimate({ distances, ground, radio }) {
@@ -302,9 +304,24 @@ export function linkEstimate({ distances, ground, radio }) {
   // the larger of the two is used.
   const terrainLoss = Math.max(diffraction.total, bullington.total);
   const fsl = freeSpaceLoss(radio.freqMHz, path.total);
-  const txDbm = wattsToDbm(radio.powerW);
-  const received = txDbm + radio.gainA + radio.gainB - radio.cableA - radio.cableB - fsl - terrainLoss;
-  const margin = received - radio.sensitivity;
+
+  // Everything between the two radios' sockets: the same in both directions.
+  const pathLoss = fsl + terrainLoss - radio.gainA - radio.gainB + radio.cableA + radio.cableB;
+  // A two-way contact needs both directions to work, and the two ends may have
+  // different transmit power and different receivers. Work out each direction
+  // and judge the link by the weaker one.
+  const powerA = radio.powerA ?? radio.powerW;
+  const powerB = radio.powerB ?? radio.powerW;
+  const sensA = radio.sensA ?? radio.sensitivity;
+  const sensB = radio.sensB ?? radio.sensitivity;
+  const direction = (powerW, sensitivity) => {
+    const received = wattsToDbm(powerW) - pathLoss;
+    return { received, margin: received - sensitivity };
+  };
+  const aToB = direction(powerA, sensB);
+  const bToA = direction(powerB, sensA);
+  const weaker = bToA.margin < aToB.margin ? 'bToA' : 'aToB';
+  const { received, margin } = weaker === 'bToA' ? bToA : aToB;
   return {
     path,
     diffraction,
@@ -312,7 +329,10 @@ export function linkEstimate({ distances, ground, radio }) {
     terrainLoss,
     terrainMethod: terrainLoss === 0 ? 'none' : bullington.total > diffraction.total ? 'allowance' : 'edges',
     freeSpaceLoss: fsl,
-    txDbm,
+    aToB,
+    bToA,
+    weaker,
+    twoWayDiffers: Math.abs(aToB.margin - bToA.margin) > 0.05,
     received,
     margin,
     verdict: verdictFor(margin),

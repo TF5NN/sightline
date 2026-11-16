@@ -1,19 +1,22 @@
-// The page itself: the map, the two waypoints, the radio settings, and the
+// The page itself: the map, the two waypoints, the station choices, and the
 // order things happen in.
 //
+// The opening view is deliberately bare: map, terrain profile and the line of
+// sight, with ground above the line drawn in red. "Estimate radio link" opens
+// the radio part: band, radio and antenna lists, and the link verdict.
+//
 // When both points are placed it:
-//   1. draws a draft from the 10 m data and works out the link,
+//   1. draws a draft from the 10 m data,
 //   2. decides where 2 m data would change the answer (near both antennas and
-//      wherever the ground comes close to the Fresnel zone),
-//   3. loads just those stretches (asking first if the download is large),
-//      and works the link out again.
-// Changing a radio setting redoes the sums at once and only downloads more
-// terrain if the new settings need stretches that were not loaded before.
+//      wherever the ground comes close to a narrow Fresnel zone),
+//   3. loads just those stretches (asking first if the download is large).
+// Changing a setting redoes the sums at once and only downloads more terrain
+// if the new settings need stretches that were not loaded before.
 //
 // L (Leaflet), GeoTIFF and Plotly are loaded by index.html before this file.
 
 import { clearProfile, drawProfile } from './chart.js';
-import { geodesicDistance, initialBearing, pointAlong } from './geo.js';
+import { geodesicDistance, pointAlong } from './geo.js';
 import { seaLevelOffset } from './geoid.js';
 import {
   FROM_10M,
@@ -28,7 +31,6 @@ import {
 } from './profile.js';
 import {
   STATUS_BLOCKED,
-  STATUS_GRAZING,
   dbmToWatts,
   detailStretches,
   linkEstimate,
@@ -37,12 +39,18 @@ import {
   wattsToDbm,
 } from './radio.js';
 import {
-  DEFAULT_PRESET,
-  PRESETS,
-  settingsForPreset,
+  ANTENNAS,
+  BANDS,
+  RADIOS,
+  antennasFor,
+  defaultSettings,
+  mirrorStations,
+  radiosFor,
+  resolveRadio,
+  settingsForBand,
   settingsFromAddress,
   settingsToAddress,
-  withSensitivity,
+  validOverride,
 } from './settings.js';
 import { createTerrain } from './terrain.js';
 
@@ -65,11 +73,15 @@ const LABELS = ['A', 'B'];
 const $ = (id) => document.getElementById(id);
 const el = {
   hint: $('hint'),
-  results: $('results'),
-  verdictBox: $('verdict-box'),
   chart: $('chart'),
   readout: $('readout'),
   legend: $('legend'),
+  legendFresnel: $('legend-fresnel'),
+  bareControls: $('bare-controls'),
+  linkToggle: $('link-toggle'),
+  linkPanel: $('link-panel'),
+  linkNote: $('link-note'),
+  verdictBox: $('verdict-box'),
   status: $('status'),
   loadDetail: $('load-detail'),
   locate: $('locate'),
@@ -77,35 +89,20 @@ const el = {
   clear: $('clear'),
   about: $('about'),
   aboutOpen: $('about-open'),
-  preset: $('preset'),
   powerUnit: $('power-unit'),
   sensNote: $('sens-note'),
 };
-// Number boxes, and the setting each one edits.
-const FIELDS = {
+// Number boxes under Advanced, and the hand-typed figure ("override") each one sets.
+const OVERRIDE_FIELDS = {
   freq: 'freqMHz',
-  'height-a': 'heightA',
-  'height-b': 'heightB',
   'gain-a': 'gainA',
   'gain-b': 'gainB',
   'cable-a': 'cableA',
   'cable-b': 'cableB',
-  sens: 'sensitivity',
-  'max-samples': 'maxSamples',
-  k: 'k',
+  'sens-a': 'sensA',
+  'sens-b': 'sensB',
 };
-const FIELD_LIMITS = {
-  freqMHz: [1, 100000],
-  heightA: [0, 1000],
-  heightB: [0, 1000],
-  gainA: [-30, 60],
-  gainB: [-30, 60],
-  cableA: [0, 100],
-  cableB: [0, 100],
-  sensitivity: [-200, 0],
-  maxSamples: [2000, 200000],
-  k: [0.5, 10],
-};
+const POWER_FIELDS = { 'power-a': 'powerA', 'power-b': 'powerB' };
 
 // --- state -------------------------------------------------------------------
 
@@ -115,7 +112,7 @@ const terrain = createTerrain(terrainOverride ? { GeoTIFF, baseUrl: terrainOverr
 
 const state = {
   waypoints: [], // { lat, lon }, at most two for now
-  settings: settingsForPreset(DEFAULT_PRESET),
+  settings: defaultSettings(),
   run: 0, // goes up every time something changes, so old downloads can be ignored
   controller: null,
   draft: null, // the 10 m profile of the current path
@@ -169,32 +166,23 @@ function drawPath() {
   pathLine.setLatLngs(line);
 }
 
-/** Colour the grazing and blocked stretches of the path on the map. */
+/** Colour the blocked stretches of the path red on the map. */
 function drawProblemsOnMap(track, status) {
   problemLines.clearLayers();
-  let current = null;
+  let points = null;
   const finish = () => {
-    if (current && current.points.length > 1) {
-      L.polyline(current.points, {
-        color: current.kind === STATUS_BLOCKED ? '#c0392b' : '#d98a00',
-        weight: 6,
-        opacity: 0.95,
-        interactive: false,
-      }).addTo(problemLines);
+    if (points && points.length > 1) {
+      L.polyline(points, { color: '#c0392b', weight: 6, opacity: 0.95, interactive: false }).addTo(problemLines);
     }
-    current = null;
+    points = null;
   };
   for (let i = 0; i < status.length; i++) {
-    const kind = status[i];
-    if (kind !== STATUS_GRAZING && kind !== STATUS_BLOCKED) {
+    if (status[i] !== STATUS_BLOCKED) {
       finish();
       continue;
     }
-    if (!current || current.kind !== kind) {
-      finish();
-      current = { kind, points: i > 0 ? [[track.lat[i - 1], track.lon[i - 1]]] : [] };
-    }
-    current.points.push([track.lat[i], track.lon[i]]);
+    if (!points) points = i > 0 ? [[track.lat[i - 1], track.lon[i - 1]]] : [];
+    points.push([track.lat[i], track.lon[i]]);
   }
   finish();
 }
@@ -267,25 +255,11 @@ const signed = (n, digits = 1) => `${n >= 0 ? '+' : '−'}${Math.abs(n).toFixed(
 const isCancel = (error) => error?.name === 'AbortError' || /abort/i.test(String(error?.message ?? ''));
 const SOURCE_WORDS = { [FROM_10M]: '10 m data', [FROM_2M]: '2 m data', [FROM_FILL]: 'filled from coarser data' };
 
-function radioFromSettings() {
-  const s = state.settings;
-  return {
-    freqMHz: s.freqMHz,
-    powerW: s.powerW,
-    gainA: s.gainA,
-    gainB: s.gainB,
-    cableA: s.cableA,
-    cableB: s.cableB,
-    heightA: s.heightA,
-    heightB: s.heightB,
-    sensitivity: s.sensitivity,
-    k: s.k,
-  };
-}
+const radioFromSettings = () => resolveRadio(state.settings);
 
 // --- drawing the result ----------------------------------------------------------
 
-/** Work the link out from the terrain loaded so far and put it on screen. */
+/** Work everything out from the terrain loaded so far and put it on screen. */
 function render() {
   const track = composeTrack(state.draft, state.stretches);
   const n = track.distance.length;
@@ -294,15 +268,17 @@ function render() {
   for (let i = 0; i < n; i++) ground[i] = track.height[i] - seaLevelOffset(track.lat[i], track.lon[i]);
 
   const km = Array.from(track.distance, (d) => d / 1000);
-  const [a, b] = state.waypoints;
   const endsKnown = Number.isFinite(ground[0]) && Number.isFinite(ground[n - 1]);
   const link = endsKnown ? linkEstimate({ distances: track.distance, ground, radio: radioFromSettings() }) : null;
   state.shown = { track, ground, link };
 
+  const linkOpen = state.settings.linkOpen;
+  const showFresnel = linkOpen && state.settings.fresnel;
   el.chart.hidden = false;
   el.readout.hidden = false;
   el.legend.hidden = !link;
-  el.results.hidden = false;
+  el.legendFresnel.hidden = !showFresnel;
+  el.bareControls.hidden = false;
 
   const view = link
     ? {
@@ -311,43 +287,62 @@ function render() {
         los: link.path.los,
         fresnel: link.path.fresnel,
         status: link.path.status,
-        edges: link.diffraction.edges.map((e) => ({ km: e.distance / 1000, height: e.height, loss: e.loss })),
+        showFresnel,
+        // The loss labels on the ridges belong with the Fresnel zone: detail for those who ask for it.
+        edges: showFresnel
+          ? link.diffraction.edges.map((e) => ({ km: e.distance / 1000, height: e.height, loss: e.loss }))
+          : [],
         masts: { baseA: ground[0], tipA: link.path.tipA, baseB: ground[n - 1], tipB: link.path.tipB },
       }
     : { km, terrain: ground };
 
-  const summary = link ? tightestSpotText(track, link) : '';
-  el.readout.textContent = summary;
+  el.readout.textContent = '';
   drawProfile(Plotly, el.chart, view, {
     onHover: (index) => {
       if (index >= n) return;
       hoverDot.setLatLng([track.lat[index], track.lon[index]]).addTo(map);
       let text = `${fmtDistance(track.distance[index])} from A · ground ${fmtHeight(ground[index])}`;
-      if (link && link.path.fresnel[index] > 0 && Number.isFinite(ground[index])) {
+      if (link && index > 0 && index < n - 1 && Number.isFinite(ground[index])) {
         const c = link.path.clearance[index];
-        const share = (c / link.path.fresnel[index]) * 100;
-        text +=
-          c >= 0
-            ? ` · ${c.toFixed(0)} m below the line of sight (${share.toFixed(0)}% of the Fresnel radius)`
-            : ` · ${(-c).toFixed(0)} m above the line of sight`;
+        text += c >= 0 ? ` · ${c.toFixed(0)} m below the line of sight` : ` · ${(-c).toFixed(0)} m above the line of sight`;
+        if (showFresnel && c >= 0 && link.path.fresnel[index] > 0) {
+          text += ` (${((c / link.path.fresnel[index]) * 100).toFixed(0)}% of the Fresnel radius)`;
+        }
       }
       if (SOURCE_WORDS[track.source[index]]) text += ` · ${SOURCE_WORDS[track.source[index]]}`;
       el.readout.textContent = text;
     },
     onLeave: () => {
       hoverDot.remove();
-      el.readout.textContent = summary;
+      el.readout.textContent = '';
     },
   });
 
-  $('r-distance').textContent = fmtDistance(track.total);
-  $('r-bearing').textContent = `${initialBearing(a, b).toFixed(0)}°`;
+  if (link) drawProblemsOnMap(track, link.path.status);
+  else problemLines.clearLayers();
+  showLinkResults();
+}
+
+/** Fill in the radio link panel (it may be closed; the numbers are kept ready either way). */
+function showLinkResults() {
+  const shown = state.shown;
   el.verdictBox.className = 'verdict-box';
-  if (!link) {
-    for (const id of ['r-verdict', 'r-margin', 'r-received', 'r-fsl', 'r-diffraction', 'r-path']) $(id).textContent = '–';
-    problemLines.clearLayers();
+  const blank = () => {
+    for (const id of ['r-verdict', 'r-margin', 'r-received', 'r-fsl', 'r-diffraction', 'r-distance']) $(id).textContent = '–';
+    el.linkNote.textContent = '';
+  };
+  if (!shown) {
+    blank();
+    el.linkNote.textContent = 'Place two points on the map to get an estimate.';
     return;
   }
+  const { track, link } = shown;
+  if (!link) {
+    blank();
+    $('r-distance').textContent = fmtDistance(track.total);
+    return;
+  }
+  $('r-distance').textContent = fmtDistance(track.total);
   $('r-verdict').textContent = link.verdict.word;
   el.verdictBox.classList.add(link.verdict.key);
   $('r-margin').textContent = `${signed(link.margin)} dB`;
@@ -360,42 +355,31 @@ function render() {
       : link.terrainMethod === 'edges'
         ? `${fmtDb(link.terrainLoss)}, ${edges} edge${edges > 1 ? 's' : ''}`
         : fmtDb(link.terrainLoss);
-  $('r-path').textContent = ['Clear', 'Grazing', 'Blocked'][link.path.overall];
-  drawProblemsOnMap(track, link.path.status);
-}
 
-function tightestSpotText(track, link) {
-  return `${worstSpotText(track, link)}${terrainLossText(link)}`;
-}
-
-/** One sentence on how the terrain loss was arrived at, when it needs explaining. */
-function terrainLossText(link) {
-  if (link.terrainMethod !== 'allowance') return '';
-  const b = link.bullington;
-  return ` Terrain loss: ${fmtDb(b.knifeEdge)} over the ridge plus ${fmtDb(b.allowance)} allowance for broad, real terrain.`;
-}
-
-function worstSpotText(track, link) {
-  const i = link.path.worstIndex;
-  if (i < 0) return '';
-  const where = fmtDistance(track.distance[i]);
-  const c = link.path.clearance[i];
-  if (c < 0) return `Worst spot: ${where} from A, ground ${(-c).toFixed(0)} m above the line of sight.`;
-  const share = (link.path.worstRatio * 100).toFixed(0);
-  return `Tightest spot: ${where} from A, ground ${c.toFixed(0)} m below the line of sight (${share}% of the Fresnel radius).`;
+  const notes = [];
+  if (link.twoWayDiffers) {
+    const [weak, other] = link.weaker === 'aToB' ? ['A to B', link.bToA] : ['B to A', link.aToB];
+    notes.push(`Judged on the weaker direction, ${weak}. The other way has ${fmtDb(other.margin - link.margin)} more to spare.`);
+  }
+  if (link.terrainMethod === 'allowance') {
+    const b = link.bullington;
+    notes.push(`Terrain loss is ${fmtDb(b.knifeEdge)} over the ridge plus ${fmtDb(b.allowance)} allowance for broad, real terrain.`);
+  }
+  el.linkNote.textContent = notes.join(' ');
 }
 
 function hideProfile() {
   state.shown = null;
-  el.results.hidden = true;
   el.chart.hidden = true;
   el.readout.hidden = true;
   el.legend.hidden = true;
+  el.bareControls.hidden = true;
   el.readout.textContent = '';
   el.loadDetail.hidden = true;
   hoverDot.remove();
   problemLines.clearLayers();
   clearProfile(Plotly, el.chart);
+  showLinkResults();
 }
 
 function explainNoData(problems) {
@@ -567,36 +551,87 @@ async function update() {
   }
 }
 
-// --- radio settings ----------------------------------------------------------------
-
-for (const [id, preset] of Object.entries(PRESETS)) {
-  const option = document.createElement('option');
-  option.value = id;
-  option.textContent = preset.label;
-  el.preset.append(option);
-}
+// --- station choices -----------------------------------------------------------------
 
 const roundTo = (n, digits) => String(Math.round(n * 10 ** digits) / 10 ** digits);
 
-/** Put the current settings into the boxes. */
+function fillSelect(select, entries, value) {
+  select.replaceChildren(
+    ...entries.map(([id, label]) => {
+      const option = document.createElement('option');
+      option.value = id;
+      option.textContent = label;
+      return option;
+    }),
+  );
+  select.value = value;
+}
+
+const antennaLabel = (a) => `${a.label} (${a.gain > 0 ? '+' : a.gain < 0 ? '−' : ''}${Math.abs(a.gain)} dBi)`;
+const showPower = (watts) =>
+  state.settings.powerUnit === 'W' ? roundTo(watts, 4) : roundTo(wattsToDbm(watts), 1);
+
+/** Put the current choices and their numbers on the page. */
 function showSettings() {
   const s = state.settings;
-  el.preset.value = s.preset;
-  for (const [id, name] of Object.entries(FIELDS)) {
-    $(id).value = roundTo(s[name], name === 'freqMHz' ? 4 : 2);
+  const radio = resolveRadio(s);
+
+  $('height-a').value = roundTo(s.a.height, 2);
+  $('height-b').value = roundTo(s.b.height, 2);
+
+  el.linkPanel.hidden = !s.linkOpen;
+  el.linkToggle.textContent = s.linkOpen ? 'Hide radio link' : 'Estimate radio link';
+  el.linkToggle.setAttribute('aria-expanded', String(s.linkOpen));
+  el.linkToggle.classList.toggle('primary', !s.linkOpen);
+
+  fillSelect($('band'), Object.entries(BANDS).map(([id, b]) => [id, b.label]), s.band);
+  const radios = radiosFor(s.band).map(([id, r]) => [id, r.label]);
+  const antennas = antennasFor(s.band).map(([id, a]) => [id, antennaLabel(a)]);
+  fillSelect($('radio-a'), radios, s.a.radio);
+  fillSelect($('antenna-a'), antennas, s.a.antenna);
+  fillSelect($('radio-b'), radios, s.b.radio);
+  fillSelect($('antenna-b'), antennas, s.b.antenna);
+  $('split').checked = s.split;
+  $('fresnel').checked = s.fresnel;
+  $('radio-a-label').textContent = s.split ? 'Radio at A' : 'Radio';
+  $('antenna-a-label').textContent = s.split ? 'Antenna at A' : 'Antenna';
+  for (const node of document.querySelectorAll('.split-only')) node.hidden = !s.split;
+  for (const node of document.querySelectorAll('.a-word')) {
+    const base = node.textContent.replace(/ at A$/, '');
+    node.textContent = s.split ? `${base} at A` : base;
+  }
+
+  // Advanced: the figures in use, whether they came from the lists or were typed by hand.
+  const values = {
+    freq: roundTo(radio.freqMHz, 4),
+    'gain-a': roundTo(radio.gainA, 2),
+    'gain-b': roundTo(radio.gainB, 2),
+    'cable-a': roundTo(radio.cableA, 2),
+    'cable-b': roundTo(radio.cableB, 2),
+    'sens-a': roundTo(radio.sensA, 1),
+    'sens-b': roundTo(radio.sensB, 1),
+    'power-a': showPower(radio.powerA),
+    'power-b': showPower(radio.powerB),
+    'max-samples': String(s.maxSamples),
+    k: roundTo(s.k, 2),
+  };
+  for (const [id, value] of Object.entries(values)) {
+    $(id).value = value;
     $(id).classList.remove('invalid');
   }
   el.powerUnit.value = s.powerUnit;
-  $('power').value = s.powerUnit === 'W' ? roundTo(s.powerW, 4) : roundTo(wattsToDbm(s.powerW), 1);
-  $('power').classList.remove('invalid');
-  $('sf').value = String(s.sf);
-  $('bw').value = String(s.bw);
   $('detail').value = s.detail;
-  $('sens').disabled = s.lora;
-  for (const node of document.querySelectorAll('.lora-only')) node.hidden = !s.lora;
-  el.sensNote.textContent = s.lora
-    ? 'Sensitivity is worked out from the spreading factor and bandwidth. Higher spreading factor or narrower bandwidth hears weaker signals, at the cost of slower messages.'
-    : 'Sensitivity is the weakest signal the receiver can use: −119 dBm is typical for FM, and that is "just readable", not comfortable. A stock rubber duck is about −3 dBi; set the real gain and height for a repeater or a yagi.';
+  const lora = Boolean(radio.lora);
+  for (const node of document.querySelectorAll('.lora-only')) node.hidden = !lora;
+  if (lora) {
+    $('sf').value = String(radio.lora.sf);
+    $('bw').value = String(radio.lora.bw);
+  }
+  $('sens-a').disabled = lora;
+  $('sens-b').disabled = lora;
+  el.sensNote.textContent = lora
+    ? 'For LoRa the sensitivity is worked out from the spreading factor and bandwidth. Higher spreading factor or narrower bandwidth hears weaker signals, at the cost of slower messages.'
+    : 'Sensitivity is the weakest signal the receiver can use: −119 dBm is typical for FM, and that is "just readable", not comfortable.';
 }
 
 let settingsTimer = null;
@@ -609,29 +644,96 @@ function settingsChanged() {
   }, 250);
 }
 
-function readNumber(input, [low, high]) {
+function readNumber(input, isValid) {
   const value = Number(input.value);
-  const ok = input.value.trim() !== '' && Number.isFinite(value) && value >= low && value <= high;
+  const ok = input.value.trim() !== '' && Number.isFinite(value) && isValid(value);
   input.classList.toggle('invalid', !ok);
   return ok ? value : null;
 }
 
-for (const [id, name] of Object.entries(FIELDS)) {
+/** Forget hand-typed figures that a fresh choice from a list should replace. */
+function dropOverrides(names) {
+  for (const name of names) delete state.settings.overrides[name];
+}
+
+// Antenna heights: always visible, because the line of sight depends on them.
+for (const [id, end] of [['height-a', 'a'], ['height-b', 'b']]) {
   $(id).addEventListener('input', () => {
-    const value = readNumber($(id), FIELD_LIMITS[name]);
+    const value = readNumber($(id), (v) => v >= 0 && v <= 1000);
     if (value === null) return;
-    state.settings[name] = name === 'maxSamples' ? Math.round(value) : value;
+    state.settings[end].height = value;
     settingsChanged();
   });
 }
 
-$('power').addEventListener('input', () => {
-  const limits = state.settings.powerUnit === 'W' ? [0.000001, 100000] : [-30, 80];
-  const value = readNumber($('power'), limits);
-  if (value === null) return;
-  state.settings.powerW = state.settings.powerUnit === 'W' ? value : dbmToWatts(value);
+el.linkToggle.addEventListener('click', () => {
+  state.settings.linkOpen = !state.settings.linkOpen;
+  showSettings();
+  if (state.draft) render();
+  writeAddress();
+  if (state.settings.linkOpen) el.linkPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+});
+
+$('band').addEventListener('change', () => {
+  const previous = state.settings;
+  state.settings = settingsForBand($('band').value, previous);
+  // Mast heights are about the place, not the radio: keep them.
+  state.settings.a.height = previous.a.height;
+  state.settings.b.height = previous.b.height;
+  showSettings();
   settingsChanged();
 });
+
+for (const [end, letter] of [['a', 'A'], ['b', 'B']]) {
+  $(`radio-${end}`).addEventListener('change', () => {
+    state.settings[end].radio = $(`radio-${end}`).value;
+    dropOverrides([`power${letter}`, `sens${letter}`]);
+    if (end === 'a') dropOverrides(['freqMHz', 'sf', 'bw']);
+    if (!state.settings.split) state.settings = mirrorStations(state.settings);
+    showSettings();
+    settingsChanged();
+  });
+  $(`antenna-${end}`).addEventListener('change', () => {
+    state.settings[end].antenna = $(`antenna-${end}`).value;
+    dropOverrides([`gain${letter}`]);
+    if (!state.settings.split) state.settings = mirrorStations(state.settings);
+    showSettings();
+    settingsChanged();
+  });
+}
+
+$('split').addEventListener('change', () => {
+  state.settings.split = $('split').checked;
+  // Either way B starts as a copy of A: switching on gives a copy to change, switching off ties them again.
+  state.settings = mirrorStations(state.settings);
+  showSettings();
+  settingsChanged();
+});
+
+$('fresnel').addEventListener('change', () => {
+  state.settings.fresnel = $('fresnel').checked;
+  if (state.draft) render();
+  writeAddress();
+});
+
+for (const [id, name] of Object.entries(OVERRIDE_FIELDS)) {
+  $(id).addEventListener('input', () => {
+    const value = readNumber($(id), (v) => validOverride(name, v));
+    if (value === null) return;
+    state.settings.overrides[name] = value;
+    settingsChanged();
+  });
+}
+
+for (const [id, name] of Object.entries(POWER_FIELDS)) {
+  $(id).addEventListener('input', () => {
+    const inWatts = state.settings.powerUnit === 'W';
+    const value = readNumber($(id), (v) => validOverride(name, inWatts ? v : dbmToWatts(v)));
+    if (value === null) return;
+    state.settings.overrides[name] = inWatts ? value : dbmToWatts(value);
+    settingsChanged();
+  });
+}
 
 el.powerUnit.addEventListener('change', () => {
   state.settings.powerUnit = el.powerUnit.value;
@@ -641,21 +743,28 @@ el.powerUnit.addEventListener('change', () => {
 
 for (const id of ['sf', 'bw']) {
   $(id).addEventListener('change', () => {
-    state.settings[id] = Number($(id).value);
-    state.settings = withSensitivity(state.settings);
+    state.settings.overrides[id] = Number($(id).value);
     showSettings();
     settingsChanged();
   });
 }
 
-$('detail').addEventListener('change', () => {
-  state.settings.detail = $('detail').value;
+$('max-samples').addEventListener('input', () => {
+  const value = readNumber($('max-samples'), (v) => v >= 2000 && v <= 200000);
+  if (value === null) return;
+  state.settings.maxSamples = Math.round(value);
   settingsChanged();
 });
 
-el.preset.addEventListener('change', () => {
-  state.settings = settingsForPreset(el.preset.value, state.settings);
-  showSettings();
+$('k').addEventListener('input', () => {
+  const value = readNumber($('k'), (v) => v >= 0.5 && v <= 10);
+  if (value === null) return;
+  state.settings.k = value;
+  settingsChanged();
+});
+
+$('detail').addEventListener('change', () => {
+  state.settings.detail = $('detail').value;
   settingsChanged();
 });
 
@@ -675,10 +784,15 @@ el.clear.addEventListener('click', () => {
 el.swap.addEventListener('click', () => {
   state.waypoints.reverse();
   const s = state.settings;
-  // The antennas travel with their points.
-  [s.heightA, s.heightB] = [s.heightB, s.heightA];
-  [s.gainA, s.gainB] = [s.gainB, s.gainA];
-  [s.cableA, s.cableB] = [s.cableB, s.cableA];
+  // The stations travel with their points.
+  [s.a, s.b] = [s.b, s.a];
+  for (const key of ['power', 'gain', 'cable', 'sens']) {
+    const [fromA, fromB] = [s.overrides[`${key}A`], s.overrides[`${key}B`]];
+    delete s.overrides[`${key}A`];
+    delete s.overrides[`${key}B`];
+    if (fromB !== undefined) s.overrides[`${key}A`] = fromB;
+    if (fromA !== undefined) s.overrides[`${key}B`] = fromA;
+  }
   showSettings();
   pathChanged();
 });

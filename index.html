@@ -16,7 +16,7 @@
     <header class="top">
       <div class="brand">
         <h1>Sightline</h1>
-        <p>The terrain between two points, from 2 m elevation data</p>
+        <p>Line of sight between two points, on 2 m elevation data</p>
       </div>
       <button id="about-open" class="ghost" type="button">About</button>
     </header>
@@ -34,88 +34,121 @@
       <section class="panel" aria-label="Terrain profile">
         <p id="hint" class="hint">Tap the map to place point A, then point B. Drag a point to move it.</p>
 
-        <dl id="results" class="results" hidden>
-          <div id="verdict-box" class="verdict-box"><dt>Link verdict</dt><dd id="r-verdict">–</dd></div>
-          <div><dt>Margin</dt><dd id="r-margin">–</dd></div>
-          <div><dt>Received signal</dt><dd id="r-received">–</dd></div>
-          <div><dt>Free-space loss</dt><dd id="r-fsl">–</dd></div>
-          <div><dt>Terrain loss</dt><dd id="r-diffraction">–</dd></div>
-          <div><dt>Path</dt><dd id="r-path">–</dd></div>
-          <div><dt>Distance</dt><dd id="r-distance">–</dd></div>
-          <div><dt>Bearing A to B</dt><dd id="r-bearing">–</dd></div>
-        </dl>
-
         <div id="chart" class="chart" hidden></div>
         <p id="readout" class="readout" hidden></p>
         <p id="legend" class="legend" hidden>
           <span class="key key-los"></span>Line of sight
-          <span class="key key-fresnel"></span>Fresnel zone
-          <span class="key key-grazing"></span>Grazing
           <span class="key key-blocked"></span>Blocked
+          <span id="legend-fresnel" hidden><span class="key key-fresnel"></span>Fresnel zone</span>
         </p>
 
+        <div id="bare-controls" class="bare-controls" hidden>
+          <label>Antenna height at A (m)
+            <input id="height-a" type="number" step="any" min="0" inputmode="decimal" />
+          </label>
+          <label>Antenna height at B (m)
+            <input id="height-b" type="number" step="any" min="0" inputmode="decimal" />
+          </label>
+          <button id="link-toggle" type="button" class="primary" aria-expanded="false" aria-controls="link-panel">
+            Estimate radio link
+          </button>
+        </div>
+
         <div class="controls">
-          <button id="load-detail" type="button" class="primary" hidden>Load 2 m detail</button>
+          <button id="load-detail" type="button" hidden>Load 2 m detail</button>
         </div>
 
         <p id="status" class="status" role="status" aria-live="polite"></p>
       </section>
 
-      <section class="panel" aria-label="Radio settings">
-        <h2>Radio</h2>
+      <section id="link-panel" class="panel" aria-label="Radio link estimate" hidden>
+        <h2>Radio link</h2>
+        <dl id="results" class="results">
+          <div id="verdict-box" class="verdict-box"><dt>Link verdict</dt><dd id="r-verdict">–</dd></div>
+          <div><dt>Margin</dt><dd id="r-margin">–</dd></div>
+          <div><dt>Received signal</dt><dd id="r-received">–</dd></div>
+          <div><dt>Free-space loss</dt><dd id="r-fsl">–</dd></div>
+          <div><dt>Terrain loss</dt><dd id="r-diffraction">–</dd></div>
+          <div><dt>Distance</dt><dd id="r-distance">–</dd></div>
+        </dl>
+        <p id="link-note" class="note"></p>
+
         <div class="fields">
-          <label class="wide">Setup
-            <select id="preset"></select>
+          <label>Band
+            <select id="band"></select>
           </label>
-          <label>Frequency (MHz)
-            <input id="freq" type="number" step="any" min="1" inputmode="decimal" />
+          <label><span id="radio-a-label">Radio</span>
+            <select id="radio-a"></select>
           </label>
-          <label>Transmit power
-            <span class="pair">
-              <input id="power" type="number" step="any" inputmode="decimal" />
-              <select id="power-unit" aria-label="Power unit">
-                <option value="W">W</option>
-                <option value="dBm">dBm</option>
-              </select>
-            </span>
+          <label><span id="antenna-a-label">Antenna</span>
+            <select id="antenna-a"></select>
           </label>
-          <label>Antenna height at A (m above ground)
-            <input id="height-a" type="number" step="any" min="0" inputmode="decimal" />
+          <label class="split-only">Radio at B
+            <select id="radio-b"></select>
           </label>
-          <label>Antenna height at B (m above ground)
-            <input id="height-b" type="number" step="any" min="0" inputmode="decimal" />
-          </label>
-          <label>Antenna gain at A (dBi)
-            <input id="gain-a" type="number" step="any" inputmode="decimal" />
-          </label>
-          <label>Antenna gain at B (dBi)
-            <input id="gain-b" type="number" step="any" inputmode="decimal" />
-          </label>
-          <label>Cable loss at A (dB)
-            <input id="cable-a" type="number" step="any" min="0" inputmode="decimal" />
-          </label>
-          <label>Cable loss at B (dB)
-            <input id="cable-b" type="number" step="any" min="0" inputmode="decimal" />
-          </label>
-          <label class="lora-only">Spreading factor
-            <select id="sf">
-              <option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option>
-            </select>
-          </label>
-          <label class="lora-only">Bandwidth (kHz)
-            <select id="bw">
-              <option>62.5</option><option>125</option><option>250</option><option>500</option>
-            </select>
-          </label>
-          <label>Receiver sensitivity (dBm)
-            <input id="sens" type="number" step="any" inputmode="decimal" />
+          <label class="split-only">Antenna at B
+            <select id="antenna-b"></select>
           </label>
         </div>
-        <p id="sens-note" class="note"></p>
+        <label class="check">
+          <input id="split" type="checkbox" />
+          Different station at each end
+        </label>
+        <label class="check">
+          <input id="fresnel" type="checkbox" />
+          Show the Fresnel zone on the chart
+        </label>
 
         <details id="advanced">
           <summary>Advanced</summary>
+          <p class="note">
+            The lists above fill these in. Type over any of them to use your own figure; choosing from a list again
+            puts the list's figure back.
+          </p>
           <div class="fields">
+            <label>Frequency (MHz)
+              <input id="freq" type="number" step="any" min="1" inputmode="decimal" />
+            </label>
+            <label>Power unit
+              <select id="power-unit">
+                <option value="W">Watts</option>
+                <option value="dBm">dBm</option>
+              </select>
+            </label>
+            <label><span class="a-word">Transmit power</span>
+              <input id="power-a" type="number" step="any" inputmode="decimal" />
+            </label>
+            <label class="split-only">Transmit power at B
+              <input id="power-b" type="number" step="any" inputmode="decimal" />
+            </label>
+            <label><span class="a-word">Antenna gain</span> (dBi)
+              <input id="gain-a" type="number" step="any" inputmode="decimal" />
+            </label>
+            <label class="split-only">Antenna gain at B (dBi)
+              <input id="gain-b" type="number" step="any" inputmode="decimal" />
+            </label>
+            <label><span class="a-word">Cable loss</span> (dB)
+              <input id="cable-a" type="number" step="any" min="0" inputmode="decimal" />
+            </label>
+            <label class="split-only">Cable loss at B (dB)
+              <input id="cable-b" type="number" step="any" min="0" inputmode="decimal" />
+            </label>
+            <label class="lora-only">Spreading factor
+              <select id="sf">
+                <option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option>
+              </select>
+            </label>
+            <label class="lora-only">Bandwidth (kHz)
+              <select id="bw">
+                <option>62.5</option><option>125</option><option>250</option><option>500</option>
+              </select>
+            </label>
+            <label><span class="a-word">Receiver sensitivity</span> (dBm)
+              <input id="sens-a" type="number" step="any" inputmode="decimal" />
+            </label>
+            <label class="split-only">Receiver sensitivity at B (dBm)
+              <input id="sens-b" type="number" step="any" inputmode="decimal" />
+            </label>
             <label class="wide">Terrain detail
               <select id="detail">
                 <option value="smart">Smart: 10 m, plus 2 m where it changes the answer</option>
@@ -130,10 +163,10 @@
               <input id="k" type="number" step="any" min="0.5" max="10" inputmode="decimal" />
             </label>
           </div>
+          <p id="sens-note" class="note"></p>
           <p class="note">
-            Smart detail reads 2 m data for the first and last 2 km and wherever the ground comes within one Fresnel
-            radius of the line of sight. k is 1.33 in normal weather: it is how much the air bends radio waves round
-            the Earth.
+            Smart detail reads 2 m data for the first and last 2 km and wherever the ground comes close to a narrow
+            Fresnel zone. k is 1.33 in normal weather: it is how much the air bends radio waves round the Earth.
           </p>
         </details>
       </section>
@@ -173,7 +206,11 @@
         </li>
         <li>
           By default the 2 m data is only read where it matters: near both antennas and wherever the ground comes
-          close to the Fresnel zone. Everything else comes from the 10 m data.
+          close to a narrow Fresnel zone. Everything else comes from the 10 m data.
+        </li>
+        <li>
+          Red on the chart and the map means the ground is above the line of sight. "Estimate radio link" adds the
+          radio side: pick a band, a radio and an antenna, and it works out whether the link should hold.
         </li>
       </ul>
       <h3>Credits</h3>

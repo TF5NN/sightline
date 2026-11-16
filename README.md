@@ -9,22 +9,28 @@ Sightline is a plain web page. There is no server and no build step: the
 browser fetches only the small pieces of the terrain files that lie under your
 path.
 
-**Status: step 2 of the build.** It draws the profile with the line of sight
-and Fresnel zone, marks grazing and blocked stretches, and estimates the link
-(free-space loss, terrain loss, received signal, margin, verdict).
+**Status: step 2 of the build, with the simpler interface.** The opening view
+is deliberately bare: the map, the terrain profile and the line of sight, with
+ground above the line drawn in red. "Estimate radio link" opens the radio side:
+pick a band, then a radio, then an antenna (it starts on 2 m, a 5 W handheld
+and a rubber duck) and get free-space loss, terrain loss, received signal,
+margin and a verdict. Both ends use the same station unless you tick
+"Different station at each end". The Fresnel zone is a switch, off by default.
 
 ## How it works
 
-1. You place point A and point B and pick a radio setup.
-2. A draft is drawn from the 10 m layer and the link is worked out.
+1. You place point A and point B.
+2. A draft is drawn from the 10 m layer and the link is worked out (quietly,
+   on the default station, until you open the radio side).
 3. "Smart detail" then reads 2 m data only where it can change the answer:
    the first and last 2 km, and wherever the ground comes within one Fresnel
    radius of the line of sight. Under 15 MB it loads by itself; above that it
    asks first.
 4. The link is worked out again on the mixed 10 m / 2 m profile.
 
-Under Advanced you can ask for 2 m on the whole path, 10 m only, a different
-sample limit, or a different Earth radius factor.
+Under Advanced (inside the radio side) you can type your own figures over the
+ones the lists fill in, and ask for 2 m on the whole path, 10 m only, a
+different sample limit, or a different Earth radius factor.
 
 Heights are shown above sea level. The data itself is measured from the WGS84
 ellipsoid, so the app corrects it with a coarse EGM96 table (`js/geoid-data.js`).
@@ -33,8 +39,9 @@ ellipsoid, so the app corrects it with a coarse EGM96 table (`js/geoid-data.js`)
 
 - Earth curvature is added to the terrain (k = 4/3 by default), so the line of
   sight is straight.
-- Clear / grazing / blocked: grazing means the ground is inside 60% of the
-  first Fresnel zone; blocked means it is above the line of sight.
+- Blocked means the ground is above the line of sight; that is the only thing
+  coloured (red). With the Fresnel zone switched on, the chart also shows the
+  zone and its 60% line, and the loss at each ridge the signal bends over.
 - Terrain loss is worked out two ways and the larger is used: knife-edge
   diffraction (ITU-R P.526 approximation) on the worst obstacle and the worst
   one on each side of it; and the Bullington single-ridge method with the
@@ -43,7 +50,9 @@ ellipsoid, so the app corrects it with a coarse EGM96 table (`js/geoid-data.js`)
   path over a mountain, which the bare knife edge rated 13 dB too kindly).
 - Margin = transmit power + gains - cable losses - free-space loss - terrain
   loss - receiver sensitivity. Verdict bands: 20 dB solid, 10 dB good, 0 dB
-  marginal, below that unlikely. These bands are a starting proposal.
+  marginal, below that unlikely. These bands are a starting proposal. With a
+  different station at each end both directions are worked out and the weaker
+  one is judged.
 - LoRa sensitivity is worked out from spreading factor and bandwidth.
 
 It does not model reflections, vegetation growth, snow or receiver noise.
@@ -58,7 +67,7 @@ Read the margin as give or take 10 dB.
 | `js/terrain.js` | Opens terrain files, fetches and remembers blocks, returns heights |
 | `js/tiles.js` | Where the files live and how they are named. The one place to change if PGC changes its layout |
 | `js/radio.js` | Curvature, Fresnel zone, diffraction, link budget, and where 2 m data is worth fetching. Pure maths |
-| `js/settings.js` | Radio presets and how settings are kept in the page address |
+| `js/settings.js` | Bands, radios and antennas, and how the choices are kept in the page address (links from before the lists still open) |
 | `js/profile.js` | Samples a path, fills holes, stitches 10 m and 2 m data into one profile |
 | `js/geo.js`, `js/projection.js`, `js/geoid.js` | Distances and bearings, map-grid conversion, sea-level correction. Pure maths |
 | `js/chart.js` | The profile chart |

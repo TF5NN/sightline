@@ -5,7 +5,6 @@ const INK = '#203b3d';
 const LINE = '#dfe5de';
 const GREEN = '#267c62';
 const BLUE = '#2f6fb7';
-const AMBER = '#d98a00';
 const RED = '#c0392b';
 
 const gapsToNull = (values) => Array.from(values, (v) => (Number.isFinite(v) ? v : null));
@@ -18,8 +17,9 @@ const gapsToNull = (values) => Array.from(values, (v) => (Number.isFinite(v) ? v
  *   terrain:  ground height with the Earth's bulge added (NaN = no data)
  *   los:      height of the line of sight at each sample
  *   fresnel:  radius of the first Fresnel zone at each sample
- *   status:   0 clear, 1 grazing, 2 blocked, per sample
- *   edges:    [{ km, height, loss }] diffraction edges
+ *   status:   per sample; 2 means the ground is above the line of sight
+ *   showFresnel: draw the Fresnel zone (off unless asked for)
+ *   edges:    [{ km, height, loss }] diffraction edges to label (optional)
  *   masts:    { baseA, tipA, baseB, tipB }
  * }
  * Any of los / fresnel / status / edges / masts may be missing: then only the
@@ -41,10 +41,11 @@ export function drawProfile(Plotly, element, view, { onHover, onLeave } = {}) {
     low = 0;
     high = 100;
   }
+  const showFresnel = hasLink && Boolean(view.showFresnel);
   let ceiling = high;
   if (hasLink) {
     for (let i = 0; i < n; i++) {
-      const upper = view.los[i] + view.fresnel[i];
+      const upper = view.los[i] + (showFresnel ? view.fresnel[i] : 0);
       if (Number.isFinite(upper) && upper > ceiling) ceiling = upper;
     }
   }
@@ -69,35 +70,37 @@ export function drawProfile(Plotly, element, view, { onHover, onLeave } = {}) {
   ];
 
   if (hasLink) {
-    const lower = new Array(n);
-    const upper = new Array(n);
-    const sixty = new Array(n);
-    const grazing = new Array(n).fill(null);
+    // Ground above the line of sight is drawn in red.
     const blocked = new Array(n).fill(null);
     for (let i = 0; i < n; i++) {
-      lower[i] = view.los[i] - view.fresnel[i];
-      upper[i] = view.los[i] + view.fresnel[i];
-      sixty[i] = view.los[i] - 0.6 * view.fresnel[i];
       // Colour a sample and its neighbours, so a single bad sample still shows as a short line.
-      if (view.status[i] === 1 || view.status[i] === 2) {
-        const target = view.status[i] === 2 ? blocked : grazing;
-        for (const j of [i - 1, i, i + 1]) if (j >= 0 && j < n) target[j] = terrain[j];
+      if (view.status[i] === 2) for (const j of [i - 1, i, i + 1]) if (j >= 0 && j < n) blocked[j] = terrain[j];
+    }
+    if (showFresnel) {
+      const lower = new Array(n);
+      const upper = new Array(n);
+      const sixty = new Array(n);
+      for (let i = 0; i < n; i++) {
+        lower[i] = view.los[i] - view.fresnel[i];
+        upper[i] = view.los[i] + view.fresnel[i];
+        sixty[i] = view.los[i] - 0.6 * view.fresnel[i];
       }
+      traces.push(
+        { x: view.km, y: lower, mode: 'lines', line: { color: 'rgba(47,111,183,0.45)', width: 1 }, ...quiet },
+        {
+          x: view.km,
+          y: upper,
+          mode: 'lines',
+          line: { color: 'rgba(47,111,183,0.45)', width: 1 },
+          fill: 'tonexty',
+          fillcolor: 'rgba(47,111,183,0.13)',
+          ...quiet,
+        },
+        { x: view.km, y: sixty, mode: 'lines', line: { color: 'rgba(47,111,183,0.6)', width: 1, dash: 'dot' }, ...quiet },
+      );
     }
     traces.push(
-      { x: view.km, y: lower, mode: 'lines', line: { color: 'rgba(47,111,183,0.45)', width: 1 }, ...quiet },
-      {
-        x: view.km,
-        y: upper,
-        mode: 'lines',
-        line: { color: 'rgba(47,111,183,0.45)', width: 1 },
-        fill: 'tonexty',
-        fillcolor: 'rgba(47,111,183,0.13)',
-        ...quiet,
-      },
-      { x: view.km, y: sixty, mode: 'lines', line: { color: 'rgba(47,111,183,0.6)', width: 1, dash: 'dot' }, ...quiet },
       { x: view.km, y: Array.from(view.los), mode: 'lines', line: { color: BLUE, width: 1.75 }, ...quiet },
-      { x: view.km, y: grazing, mode: 'lines', line: { color: AMBER, width: 3.5 }, connectgaps: false, ...quiet },
       { x: view.km, y: blocked, mode: 'lines', line: { color: RED, width: 3.5 }, connectgaps: false, ...quiet },
     );
     if (view.masts) {

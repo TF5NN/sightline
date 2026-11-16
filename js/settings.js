@@ -1,132 +1,269 @@
-// The radio settings: the ready-made setups, their defaults, and how they are
-// read from and written to the page address so a link can be shared.
-// No page elements in here, so it can be tested on its own.
+// The station choices (band, radio, antenna), their defaults, and how the
+// whole setup is read from and written to the page address so a link can be
+// shared. No page elements in here, so it can be tested on its own.
+//
+// The idea: pick a band, then a radio made for that band, then an antenna.
+// Each choice fills in the numbers (frequency, power, sensitivity, gain).
+// Anyone who wants to type their own numbers can do so under Advanced; those
+// are kept as "overrides" on top of the choices.
 
 import { loraSensitivity } from './radio.js';
 
-// Ready-made setups. LoRa figures are the networks' own defaults, checked
-// against MeshCore and Meshtastic documentation in November 2026. Antenna
-// gains and heights are typical starting points, meant to be changed. A stock
-// rubber-duck antenna is put at -3 dBi; many are worse.
-export const PRESETS = {
-  meshcore: {
-    label: 'MeshCore (EU/UK narrow, 869.618 MHz)',
-    lora: true,
-    freqMHz: 869.618, powerW: 0.158, sf: 8, bw: 62.5,
-    gainA: 2, gainB: 2, cableA: 0, cableB: 0, heightA: 2, heightB: 2,
-  },
-  meshtastic: {
-    label: 'Meshtastic LongFast (EU 868, 869.525 MHz)',
-    lora: true,
-    freqMHz: 869.525, powerW: 0.158, sf: 11, bw: 250,
-    gainA: 2, gainB: 2, cableA: 0, cableB: 0, heightA: 2, heightB: 2,
-  },
-  fm2m: {
-    label: '2 m FM handheld (145.5 MHz, 5 W, rubber duck)',
-    lora: false,
-    freqMHz: 145.5, powerW: 5, sensitivity: -119,
-    gainA: -3, gainB: -3, cableA: 0, cableB: 0, heightA: 1.5, heightB: 1.5,
-  },
-  fm70cm: {
-    label: '70 cm FM handheld (433.5 MHz, 5 W, rubber duck)',
-    lora: false,
-    freqMHz: 433.5, powerW: 5, sensitivity: -119,
-    gainA: -3, gainB: -3, cableA: 0, cableB: 0, heightA: 1.5, heightB: 1.5,
-  },
-  custom: { label: 'Custom (type your own figures)', lora: false },
+export const BANDS = {
+  '2m': { label: '2 m (145 MHz)', freqMHz: 145.5 },
+  '70cm': { label: '70 cm (433 MHz)', freqMHz: 433.5 },
+  lora868: { label: '868 MHz (LoRa mesh)', freqMHz: 869.618 },
 };
 
-export const DEFAULT_PRESET = 'meshcore';
+// LoRa figures are the networks' own defaults, checked against MeshCore and
+// Meshtastic documentation in November 2026. -119 dBm is the usual figure for
+// an FM receiver, and means "just readable".
+export const RADIOS = {
+  ht5w: { bands: ['2m', '70cm'], label: 'Handheld, 5 W', powerW: 5, sensitivity: -119 },
+  mobile50w: { bands: ['2m', '70cm'], label: 'Mobile or base, 50 W', powerW: 50, sensitivity: -119 },
+  meshcore: {
+    bands: ['lora868'],
+    label: 'MeshCore node (EU/UK narrow)',
+    powerW: 0.158,
+    freqMHz: 869.618,
+    lora: { sf: 8, bw: 62.5 },
+  },
+  meshtastic: {
+    bands: ['lora868'],
+    label: 'Meshtastic node (LongFast)',
+    powerW: 0.158,
+    freqMHz: 869.525,
+    lora: { sf: 11, bw: 250 },
+  },
+};
+
+// Gains are typical figures, in dBi. A stock rubber duck is put at -3 dBi; many are worse.
+export const ANTENNAS = {
+  duck: { bands: ['2m', '70cm'], label: 'Rubber duck', gain: -3 },
+  quarter: { bands: ['2m', '70cm'], label: 'Quarter-wave whip', gain: 2 },
+  mobilewhip: { bands: ['2m', '70cm'], label: 'Mobile whip (5/8 wave)', gain: 3.5 },
+  collinear: { bands: ['2m', '70cm'], label: 'Collinear base antenna', gain: 6 },
+  yagi3: { bands: ['2m'], label: '3-element yagi', gain: 6.5 },
+  yagi7: { bands: ['70cm'], label: '7-element yagi', gain: 10 },
+  stub868: { bands: ['lora868'], label: 'Small stub antenna', gain: 0 },
+  whip868: { bands: ['lora868'], label: 'Whip antenna', gain: 2 },
+  collinear868: { bands: ['lora868'], label: 'Collinear antenna', gain: 5 },
+  yagi868: { bands: ['lora868'], label: 'Yagi', gain: 9 },
+};
+
+// What each band starts on.
+const BAND_DEFAULTS = {
+  '2m': { radio: 'ht5w', antenna: 'duck', height: 1.5 },
+  '70cm': { radio: 'ht5w', antenna: 'duck', height: 1.5 },
+  lora868: { radio: 'meshcore', antenna: 'whip868', height: 2 },
+};
+
+export const DEFAULT_BAND = '2m';
 export const DEFAULT_MAX_SAMPLES = 20000;
 export const DEFAULT_K = 4 / 3;
 export const DETAIL_MODES = ['smart', 'full', '10m'];
 
-/** All settings for a preset, filled in and ready to use. */
-export function settingsForPreset(presetId, previous = null) {
-  const preset = PRESETS[presetId] ?? PRESETS[DEFAULT_PRESET];
-  const id = PRESETS[presetId] ? presetId : DEFAULT_PRESET;
-  // "Custom" keeps whatever figures were showing.
-  const base = id === 'custom' && previous ? previous : { sf: 8, bw: 62.5, sensitivity: -119, ...preset };
-  const settings = {
-    preset: id,
-    lora: id === 'custom' ? false : preset.lora,
-    freqMHz: base.freqMHz,
-    powerW: base.powerW,
-    gainA: base.gainA,
-    gainB: base.gainB,
-    cableA: base.cableA,
-    cableB: base.cableB,
-    heightA: base.heightA,
-    heightB: base.heightB,
-    sf: base.sf,
-    bw: base.bw,
-    sensitivity: base.sensitivity,
+// The numbers that can be typed by hand under Advanced.
+export const OVERRIDE_KEYS = ['freqMHz', 'powerA', 'powerB', 'gainA', 'gainB', 'cableA', 'cableB', 'sensA', 'sensB', 'sf', 'bw'];
+
+export const radiosFor = (band) => Object.entries(RADIOS).filter(([, r]) => r.bands.includes(band));
+export const antennasFor = (band) => Object.entries(ANTENNAS).filter(([, a]) => a.bands.includes(band));
+
+/** A fresh setup for a band: both ends the same, nothing typed by hand. */
+export function settingsForBand(bandId, previous = null) {
+  const band = BANDS[bandId] ? bandId : DEFAULT_BAND;
+  const start = BAND_DEFAULTS[band];
+  return {
+    band,
+    split: false, // true = a different station at each end
+    a: { ...start },
+    b: { ...start },
+    overrides: {},
+    linkOpen: previous?.linkOpen ?? false, // is the "estimate radio link" part showing?
+    fresnel: previous?.fresnel ?? false, // is the Fresnel zone drawn?
     powerUnit: previous?.powerUnit ?? 'W',
     detail: previous?.detail ?? 'smart',
     maxSamples: previous?.maxSamples ?? DEFAULT_MAX_SAMPLES,
     k: previous?.k ?? DEFAULT_K,
   };
-  return withSensitivity(settings);
 }
 
-/** For LoRa setups the sensitivity follows from spreading factor and bandwidth. */
-export function withSensitivity(settings) {
-  if (!settings.lora) return settings;
-  return { ...settings, sensitivity: Math.round(loraSensitivity(settings.sf, settings.bw) * 10) / 10 };
+export const defaultSettings = () => settingsForBand(DEFAULT_BAND);
+
+/** Make B a copy of A again (used when "different station at each end" is switched off). */
+export function mirrorStations(settings) {
+  const o = { ...settings.overrides };
+  for (const key of ['power', 'gain', 'cable', 'sens']) {
+    if (o[`${key}A`] !== undefined) o[`${key}B`] = o[`${key}A`];
+    else delete o[`${key}B`];
+  }
+  return { ...settings, b: { ...settings.b, radio: settings.a.radio, antenna: settings.a.antenna }, overrides: o };
 }
 
-// Short names used in the page address.
-const ADDRESS_KEYS = {
-  freqMHz: 'f', powerW: 'p', heightA: 'ha', heightB: 'hb', gainA: 'ga', gainB: 'gb',
-  cableA: 'ca', cableB: 'cb', sf: 'sf', bw: 'bw', sensitivity: 's',
+/**
+ * Turn the choices into the numbers the radio maths needs.
+ * Anything typed by hand under Advanced wins over the lists.
+ */
+export function resolveRadio(settings) {
+  const band = BANDS[settings.band];
+  const o = settings.overrides;
+  const pick = (value, fallback) => (value === undefined ? fallback : value);
+  const end = (station, letter) => {
+    const radio = RADIOS[station.radio];
+    const antenna = ANTENNAS[station.antenna];
+    const sf = pick(o.sf, radio.lora?.sf);
+    const bw = pick(o.bw, radio.lora?.bw);
+    const sensitivity = radio.lora ? Math.round(loraSensitivity(sf, bw) * 10) / 10 : radio.sensitivity;
+    return {
+      powerW: pick(o[`power${letter}`], radio.powerW),
+      gain: pick(o[`gain${letter}`], antenna.gain),
+      cable: pick(o[`cable${letter}`], 0),
+      sensitivity: pick(o[`sens${letter}`], sensitivity),
+      height: station.height,
+      lora: radio.lora ? { sf, bw } : null,
+    };
+  };
+  const a = end(settings.a, 'A');
+  const b = end(settings.split ? settings.b : { ...settings.a, height: settings.b.height }, 'B');
+  if (!settings.split) {
+    // One station: B follows A, including anything typed by hand for A.
+    b.powerW = a.powerW;
+    b.gain = a.gain;
+    b.cable = a.cable;
+    b.sensitivity = a.sensitivity;
+  }
+  return {
+    freqMHz: pick(o.freqMHz, RADIOS[settings.a.radio].freqMHz ?? band.freqMHz),
+    powerA: a.powerW,
+    powerB: b.powerW,
+    gainA: a.gain,
+    gainB: b.gain,
+    cableA: a.cable,
+    cableB: b.cable,
+    sensA: a.sensitivity,
+    sensB: b.sensitivity,
+    heightA: a.height,
+    heightB: b.height,
+    lora: a.lora,
+    k: settings.k,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// The page address
+// ---------------------------------------------------------------------------
+
+const OVERRIDE_ADDRESS = {
+  freqMHz: 'f', powerA: 'pa', powerB: 'pb', gainA: 'ga', gainB: 'gb',
+  cableA: 'ca', cableB: 'cb', sensA: 'sa', sensB: 'sb', sf: 'sf', bw: 'bw',
 };
+
+const LIMITS = {
+  freqMHz: [1, 100000], powerA: [0.000001, 100000], powerB: [0.000001, 100000],
+  gainA: [-30, 60], gainB: [-30, 60], cableA: [0, 100], cableB: [0, 100],
+  sensA: [-200, 0], sensB: [-200, 0], height: [0, 1000],
+};
+const SF_VALUES = [7, 8, 9, 10, 11, 12];
+const BW_VALUES = [62.5, 125, 250, 500];
+
+export function validOverride(name, value) {
+  if (!Number.isFinite(value)) return false;
+  if (name === 'sf') return SF_VALUES.includes(value);
+  if (name === 'bw') return BW_VALUES.includes(value);
+  return value >= LIMITS[name][0] && value <= LIMITS[name][1];
+}
 
 const trim = (n) => String(Math.round(n * 1000) / 1000);
 
-/** The settings as "key=value" pieces for the page address. */
-export function settingsToAddress(settings) {
-  const parts = [`preset=${settings.preset}`];
-  for (const [name, key] of Object.entries(ADDRESS_KEYS)) {
-    if ((name === 'sf' || name === 'bw') && !settings.lora) continue;
-    if (name === 'sensitivity' && settings.lora) continue;
-    parts.push(`${key}=${trim(settings[name])}`);
+/** The setup as "key=value" pieces for the page address. */
+export function settingsToAddress(s) {
+  const parts = [`band=${s.band}`, `ra=${s.a.radio}`, `aa=${s.a.antenna}`, `ha=${trim(s.a.height)}`, `hb=${trim(s.b.height)}`];
+  if (s.split) parts.push('split=1', `rb=${s.b.radio}`, `ab=${s.b.antenna}`);
+  for (const [name, key] of Object.entries(OVERRIDE_ADDRESS)) {
+    if (s.overrides[name] === undefined) continue;
+    if (!s.split && name.endsWith('B')) continue;
+    parts.push(`${key}=${trim(s.overrides[name])}`);
   }
-  if (settings.powerUnit !== 'W') parts.push(`pu=${settings.powerUnit}`);
-  if (settings.detail !== 'smart') parts.push(`detail=${settings.detail}`);
-  if (settings.maxSamples !== DEFAULT_MAX_SAMPLES) parts.push(`n=${settings.maxSamples}`);
-  if (Math.abs(settings.k - DEFAULT_K) > 1e-6) parts.push(`k=${trim(settings.k)}`);
+  if (s.linkOpen) parts.push('link=1');
+  if (s.fresnel) parts.push('fz=1');
+  if (s.powerUnit !== 'W') parts.push(`pu=${s.powerUnit}`);
+  if (s.detail !== 'smart') parts.push(`detail=${s.detail}`);
+  if (s.maxSamples !== DEFAULT_MAX_SAMPLES) parts.push(`n=${s.maxSamples}`);
+  if (Math.abs(s.k - DEFAULT_K) > 1e-6) parts.push(`k=${trim(s.k)}`);
   return parts;
 }
 
-const LIMITS = {
-  freqMHz: [1, 100000], powerW: [0.000001, 100000], heightA: [0, 1000], heightB: [0, 1000],
-  gainA: [-30, 60], gainB: [-30, 60], cableA: [0, 100], cableB: [0, 100],
-  sensitivity: [-200, 0],
+// Links made before the band / radio / antenna lists existed used "preset=".
+const OLD_PRESETS = {
+  meshcore: { band: 'lora868', radio: 'meshcore', antenna: 'whip868' },
+  meshtastic: { band: 'lora868', radio: 'meshtastic', antenna: 'whip868' },
+  fm2m: { band: '2m', radio: 'ht5w', antenna: 'duck' },
+  fm70cm: { band: '70cm', radio: 'ht5w', antenna: 'duck' },
+  custom: { band: '2m', radio: 'ht5w', antenna: 'duck' },
 };
 
-/** Read settings back out of the page address. Anything missing or nonsensical keeps its default. */
-export function settingsFromAddress(params) {
-  let settings = settingsForPreset(params.get('preset') ?? DEFAULT_PRESET);
-  for (const [name, key] of Object.entries(ADDRESS_KEYS)) {
-    if (!params.has(key)) continue;
-    const value = Number(params.get(key));
-    if (!Number.isFinite(value)) continue;
-    if (name === 'sf') {
-      if ([7, 8, 9, 10, 11, 12].includes(value)) settings.sf = value;
-    } else if (name === 'bw') {
-      if ([62.5, 125, 250, 500].includes(value)) settings.bw = value;
-    } else if (value >= LIMITS[name][0] && value <= LIMITS[name][1]) {
-      settings[name] = value;
-    }
+function fromOldAddress(params) {
+  const old = OLD_PRESETS[params.get('preset')] ?? OLD_PRESETS.fm2m;
+  const s = settingsForBand(old.band);
+  s.a.radio = old.radio;
+  s.b.radio = old.radio;
+  s.a.antenna = old.antenna;
+  s.b.antenna = old.antenna;
+  s.linkOpen = true; // those links were always link estimates
+  s.fresnel = true; // and always showed the Fresnel zone
+  const number = (key) => (params.has(key) ? Number(params.get(key)) : NaN);
+  const set = (name, value) => {
+    if (validOverride(name, value)) s.overrides[name] = value;
+  };
+  set('freqMHz', number('f'));
+  set('powerA', number('p'));
+  set('powerB', number('p'));
+  set('gainA', number('ga'));
+  set('gainB', number('gb'));
+  set('cableA', number('ca'));
+  set('cableB', number('cb'));
+  if (!RADIOS[old.radio].lora) {
+    set('sensA', number('s'));
+    set('sensB', number('s'));
   }
-  if (params.get('pu') === 'dBm') settings.powerUnit = 'dBm';
-  if (DETAIL_MODES.includes(params.get('detail'))) settings.detail = params.get('detail');
-  // The earlier "fast=1" switch meant 10 m only.
-  if (params.get('fast') === '1') settings.detail = '10m';
+  set('sf', number('sf'));
+  set('bw', number('bw'));
+  // The old page had one gain and one cable box per end, so the ends could differ.
+  s.split = s.overrides.gainA !== s.overrides.gainB || s.overrides.cableA !== s.overrides.cableB;
+  return s;
+}
+
+/** Read a setup back out of the page address. Anything missing or nonsensical keeps its default. */
+export function settingsFromAddress(params) {
+  let s;
+  if (params.has('preset') && !params.has('band')) {
+    s = fromOldAddress(params);
+  } else {
+    s = settingsForBand(params.get('band') ?? DEFAULT_BAND);
+    const choose = (table, id, fallback) => (table[id]?.bands.includes(s.band) ? id : fallback);
+    s.a.radio = choose(RADIOS, params.get('ra'), s.a.radio);
+    s.a.antenna = choose(ANTENNAS, params.get('aa'), s.a.antenna);
+    s.split = params.get('split') === '1';
+    s.b.radio = s.split ? choose(RADIOS, params.get('rb'), s.a.radio) : s.a.radio;
+    s.b.antenna = s.split ? choose(ANTENNAS, params.get('ab'), s.a.antenna) : s.a.antenna;
+    for (const [name, key] of Object.entries(OVERRIDE_ADDRESS)) {
+      if (!params.has(key)) continue;
+      const value = Number(params.get(key));
+      if (validOverride(name, value)) s.overrides[name] = value;
+    }
+    s.linkOpen = params.get('link') === '1';
+    s.fresnel = params.get('fz') === '1';
+  }
+  for (const [end, key] of [['a', 'ha'], ['b', 'hb']]) {
+    const h = Number(params.get(key));
+    if (params.has(key) && Number.isFinite(h) && h >= LIMITS.height[0] && h <= LIMITS.height[1]) s[end].height = h;
+  }
+  if (params.get('pu') === 'dBm') s.powerUnit = 'dBm';
+  if (DETAIL_MODES.includes(params.get('detail'))) s.detail = params.get('detail');
+  if (params.get('fast') === '1') s.detail = '10m'; // the very first version's switch
   const n = Number(params.get('n'));
-  if (Number.isFinite(n) && n >= 2000 && n <= 200000) settings.maxSamples = Math.round(n);
+  if (Number.isFinite(n) && n >= 2000 && n <= 200000) s.maxSamples = Math.round(n);
   const k = Number(params.get('k'));
-  if (params.has('k') && Number.isFinite(k) && k >= 0.5 && k <= 10) settings.k = k;
-  settings = withSensitivity(settings);
-  return settings;
+  if (params.has('k') && Number.isFinite(k) && k >= 0.5 && k <= 10) s.k = k;
+  return s;
 }
