@@ -45,6 +45,7 @@ import {
   RADIOS,
   antennasFor,
   defaultSettings,
+  bandStart,
   mirrorStations,
   radiosFor,
   resolveRadio,
@@ -385,6 +386,9 @@ function showLinkResults() {
         : fmtDb(link.terrainLoss);
 
   const notes = [];
+  if (link.oneWay) {
+    notes.push(`One way only, ${link.oneWay === 'aToB' ? 'A to B' : 'B to A'}: the other end only receives.`);
+  }
   if (link.twoWayDiffers) {
     const [weak, other] = link.weaker === 'aToB' ? ['A to B', link.bToA] : ['B to A', link.aToB];
     notes.push(`Judged on the weaker direction, ${weak}. The other way has ${fmtDb(other.margin - link.margin)} more to spare.`);
@@ -597,7 +601,7 @@ function fillSelect(select, entries, value) {
 
 const antennaLabel = (a) => `${a.label} (${a.gain > 0 ? '+' : a.gain < 0 ? '−' : ''}${Math.abs(a.gain)} dBi)`;
 const showPower = (watts) =>
-  state.settings.powerUnit === 'W' ? roundTo(watts, 4) : roundTo(wattsToDbm(watts), 1);
+  state.settings.powerUnit === 'W' ? roundTo(watts, 4) : watts > 0 ? roundTo(wattsToDbm(watts), 1) : '';
 
 /** Put the current choices and their numbers on the page. */
 function showSettings() {
@@ -705,9 +709,12 @@ el.linkToggle.addEventListener('click', () => {
 $('band').addEventListener('change', () => {
   const previous = state.settings;
   state.settings = settingsForBand($('band').value, previous);
-  // Mast heights are about the place, not the radio: keep them.
-  state.settings.a.height = previous.a.height;
-  state.settings.b.height = previous.b.height;
+  // A height that was set by hand is about the place, not the radio: keep it.
+  // One still on the old band's starting figure makes way for the new band's.
+  const before = bandStart(previous.band);
+  for (const end of ['a', 'b']) {
+    if (previous[end].height !== before[end].height) state.settings[end].height = previous[end].height;
+  }
   showSettings();
   settingsChanged();
 });

@@ -13,6 +13,16 @@ export const BANDS = {
   '2m': { label: '2 m (145 MHz)', freqMHz: 145.5 },
   '70cm': { label: '70 cm (433 MHz)', freqMHz: 433.5 },
   lora868: { label: '868 MHz (LoRa mesh)', freqMHz: 869.618 },
+  // The services below are PLACEHOLDERS: rough, typical figures to make the
+  // tool useful outside amateur radio. Nobody who works with these services
+  // has checked them yet, and legal power limits are not checked at all.
+  pmr446: { label: 'PMR446 walkie-talkie (446 MHz)', freqMHz: 446.1 },
+  marine: { label: 'Marine VHF (156.8 MHz)', freqMHz: 156.8 },
+  wifi24: { label: 'Wi-Fi link (2.4 GHz)', freqMHz: 2437 },
+  wifi5: { label: 'Wi-Fi link (5 GHz)', freqMHz: 5500 },
+  cell800: { label: 'Mobile network, 800 MHz (4G/5G)', freqMHz: 800 },
+  cell3500: { label: 'Mobile network, 3.5 GHz (5G)', freqMHz: 3500 },
+  fmbc: { label: 'FM broadcast (98 MHz)', freqMHz: 98 },
 };
 
 // LoRa figures are the networks' own defaults, checked against MeshCore and
@@ -35,6 +45,17 @@ export const RADIOS = {
     freqMHz: 869.525,
     lora: { sf: 11, bw: 250 },
   },
+  // Placeholders from here on (see BANDS). A power of 0 means "receives only":
+  // the link is then judged in the one direction that exists.
+  pmr: { bands: ['pmr446'], label: 'PMR446 handheld, 0.5 W', powerW: 0.5, sensitivity: -119 },
+  marine25: { bands: ['marine'], label: 'Fixed marine radio, 25 W', powerW: 25, sensitivity: -119 },
+  marine5: { bands: ['marine'], label: 'Handheld marine radio, 5 W', powerW: 5, sensitivity: -119 },
+  wifi: { bands: ['wifi24', 'wifi5'], label: 'Outdoor Wi-Fi radio, 100 mW', powerW: 0.1, sensitivity: -92 },
+  celltower: { bands: ['cell800', 'cell3500'], label: 'Base station (cell tower)', powerW: 40, sensitivity: -104 },
+  phone: { bands: ['cell800', 'cell3500'], label: 'Phone or 4G/5G router', powerW: 0.2, sensitivity: -100 },
+  bctx1k: { bands: ['fmbc'], label: 'Broadcast transmitter, 1 kW', powerW: 1000, sensitivity: -95 },
+  bctx100: { bands: ['fmbc'], label: 'Relay transmitter, 100 W', powerW: 100, sensitivity: -95 },
+  fmrx: { bands: ['fmbc'], label: 'FM radio (receives only)', powerW: 0, sensitivity: -95 },
 };
 
 // Gains are typical figures, in dBi. A stock rubber duck is put at -3 dBi; many are worse.
@@ -49,14 +70,43 @@ export const ANTENNAS = {
   whip868: { bands: ['lora868'], label: 'Whip antenna', gain: 2 },
   collinear868: { bands: ['lora868'], label: 'Collinear antenna', gain: 5 },
   yagi868: { bands: ['lora868'], label: 'Yagi', gain: 9 },
+  // Placeholders from here on (see BANDS).
+  pmrbuiltin: { bands: ['pmr446'], label: 'Built-in antenna', gain: 0 },
+  marinewhip: { bands: ['marine'], label: 'Boat whip antenna', gain: 3 },
+  marineht: { bands: ['marine'], label: 'Handheld antenna', gain: -3 },
+  marinecoast: { bands: ['marine'], label: 'Shore station collinear', gain: 6 },
+  wifiomni: { bands: ['wifi24', 'wifi5'], label: 'Omni antenna', gain: 8 },
+  wifipanel: { bands: ['wifi24', 'wifi5'], label: 'Panel antenna', gain: 16 },
+  wifigrid: { bands: ['wifi24'], label: 'Grid dish', gain: 24 },
+  wifidish: { bands: ['wifi5'], label: 'Dish', gain: 30 },
+  cellsector: { bands: ['cell800'], label: 'Sector antenna', gain: 16 },
+  cellmimo: { bands: ['cell3500'], label: 'Antenna panel (massive MIMO)', gain: 24 },
+  phoneant: { bands: ['cell800', 'cell3500'], label: 'Phone in the hand', gain: -3 },
+  cellexternal: { bands: ['cell800', 'cell3500'], label: 'Outdoor directional antenna', gain: 9 },
+  bcarray: { bands: ['fmbc'], label: 'Mast antenna array', gain: 7 },
+  fmwhip: { bands: ['fmbc'], label: 'Car or portable radio whip', gain: -2 },
+  fmroof: { bands: ['fmbc'], label: 'Rooftop FM antenna', gain: 4 },
 };
 
-// What each band starts on.
+// What each band starts on. With a "b", the two ends start as different stations.
 const BAND_DEFAULTS = {
   '2m': { radio: 'ht5w', antenna: 'duck', height: 1.5 },
   '70cm': { radio: 'ht5w', antenna: 'duck', height: 1.5 },
   lora868: { radio: 'meshcore', antenna: 'whip868', height: 2 },
+  pmr446: { radio: 'pmr', antenna: 'pmrbuiltin', height: 1.5 },
+  marine: { radio: 'marine25', antenna: 'marinewhip', height: 4 },
+  wifi24: { radio: 'wifi', antenna: 'wifigrid', height: 8 },
+  wifi5: { radio: 'wifi', antenna: 'wifidish', height: 8 },
+  cell800: { radio: 'celltower', antenna: 'cellsector', height: 30, b: { radio: 'phone', antenna: 'phoneant', height: 1.5 } },
+  cell3500: { radio: 'celltower', antenna: 'cellmimo', height: 30, b: { radio: 'phone', antenna: 'phoneant', height: 1.5 } },
+  fmbc: { radio: 'bctx1k', antenna: 'bcarray', height: 50, b: { radio: 'fmrx', antenna: 'fmwhip', height: 1.5 } },
 };
+
+/** The two stations a band starts on, and whether they differ. */
+export function bandStart(bandId) {
+  const { b, ...a } = BAND_DEFAULTS[BANDS[bandId] ? bandId : DEFAULT_BAND];
+  return { a: { ...a }, b: { ...(b ?? a) }, split: Boolean(b) };
+}
 
 export const DEFAULT_BAND = '2m';
 export const DEFAULT_MAX_SAMPLES = 20000;
@@ -69,15 +119,15 @@ export const OVERRIDE_KEYS = ['freqMHz', 'powerA', 'powerB', 'gainA', 'gainB', '
 export const radiosFor = (band) => Object.entries(RADIOS).filter(([, r]) => r.bands.includes(band));
 export const antennasFor = (band) => Object.entries(ANTENNAS).filter(([, a]) => a.bands.includes(band));
 
-/** A fresh setup for a band: both ends the same, nothing typed by hand. */
+/** A fresh setup for a band: the stations it starts on, nothing typed by hand. */
 export function settingsForBand(bandId, previous = null) {
   const band = BANDS[bandId] ? bandId : DEFAULT_BAND;
-  const start = BAND_DEFAULTS[band];
+  const start = bandStart(band);
   return {
     band,
-    split: false, // true = a different station at each end
-    a: { ...start },
-    b: { ...start },
+    split: start.split, // true = a different station at each end
+    a: start.a,
+    b: start.b,
     overrides: {},
     linkOpen: previous?.linkOpen ?? false, // is the "estimate radio link" part showing?
     fresnel: previous?.fresnel ?? true, // draw the Fresnel zone while the radio link part is open?

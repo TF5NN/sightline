@@ -41,6 +41,11 @@ test('each band only offers radios and antennas made for it', () => {
   for (const band of Object.keys(BANDS)) {
     const s = settingsForBand(band);
     assert.ok(RADIOS[s.a.radio].bands.includes(band), band);
+    assert.ok(RADIOS[s.b.radio].bands.includes(band), band);
+    assert.ok(ANTENNAS[s.a.antenna].bands.includes(band), band);
+    assert.ok(ANTENNAS[s.b.antenna].bands.includes(band), band);
+    const r = resolveRadio(s);
+    assert.ok(Number.isFinite(r.freqMHz) && Number.isFinite(r.gainA) && Number.isFinite(r.sensB), band);
     assert.ok(ANTENNAS[s.a.antenna].bands.includes(band), band);
   }
 });
@@ -136,4 +141,18 @@ test('links from the earlier version still open with the same numbers', () => {
   assert.equal(lora.sensA, -130);
   assert.equal(lora.gainA, 2);
   assert.equal(fromLink('fast=1').detail, '10m');
+});
+
+test('a band can start with a different station at each end, and that survives the page address', () => {
+  const s = settingsForBand('fmbc');
+  assert.equal(s.split, true);
+  assert.equal(s.a.radio, 'bctx1k');
+  assert.equal(s.b.radio, 'fmrx');
+  assert.equal(s.a.height, 50);
+  assert.equal(s.b.height, 1.5);
+  const back = settingsFromAddress(new URLSearchParams(settingsToAddress(s).join('&')));
+  assert.equal(back.split, true);
+  assert.equal(back.b.radio, 'fmrx');
+  assert.equal(back.b.antenna, 'fmwhip');
+  assert.equal(resolveRadio(back).powerB, 0);
 });

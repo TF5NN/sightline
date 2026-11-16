@@ -315,3 +315,18 @@ test('two different stations: the link is judged by the weaker direction', () =>
   const same = linkEstimate({ distances, ground, radio: { ...radio, powerB: 5, sensB: -119 } });
   assert.equal(same.twoWayDiffers, false);
 });
+
+test('an end that only receives makes the link one-way, judged in the direction that exists', () => {
+  const distances = Float64Array.from({ length: 101 }, (_, i) => i * 100);
+  const ground = new Float32Array(101).fill(0);
+  const base = { freqMHz: 98, gainA: 7, gainB: -2, cableA: 0, cableB: 0, heightA: 50, heightB: 1.5, sensA: -95, sensB: -95 };
+  const oneWay = linkEstimate({ distances, ground, radio: { ...base, powerA: 1000, powerB: 0 } });
+  assert.equal(oneWay.oneWay, 'aToB');
+  assert.equal(oneWay.weaker, 'aToB');
+  assert.equal(oneWay.twoWayDiffers, false);
+  assert.ok(Number.isFinite(oneWay.margin));
+  assert.equal(oneWay.margin, oneWay.aToB.margin);
+  const twoWay = linkEstimate({ distances, ground, radio: { ...base, powerA: 1000, powerB: 5 } });
+  assert.equal(twoWay.oneWay, null);
+  assert.equal(twoWay.weaker, 'bToA');
+});

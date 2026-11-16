@@ -283,6 +283,18 @@ def main():
             check(True, f"{name}: switching the split off ties both ends together again")
             page.wait_for_function("!document.getElementById('link-note').textContent.includes('weaker direction')", timeout=15000)
 
+            # A band outside amateur radio: FM broadcast starts with a transmitter at A and a receiver at B, one way.
+            page.select_option("#band", "fmbc")
+            page.wait_for_function("document.getElementById('link-note').textContent.includes('One way only, A to B')", timeout=15000)
+            check(page.is_checked("#split") and page.input_value("#radio-a") == "bctx1k" and page.input_value("#radio-b") == "fmrx",
+                  f"{name}: FM broadcast starts as transmitter and receiver")
+            check(page.inner_text("#r-verdict") in ("Solid", "Good", "Marginal", "Unlikely") and "Infinity" not in page.inner_text("#results"),
+                  f"{name}: a one-way link still gets a verdict ({page.inner_text('#r-verdict')}, {page.inner_text('#r-margin')})")
+            check(len(options("#band")) == 10, f"{name}: ten bands on offer")
+            page.select_option("#band", "2m")
+            page.wait_for_function("!document.getElementById('link-note').textContent.includes('One way only')", timeout=15000)
+            check(not page.is_checked("#split") and page.input_value("#radio-a") == "ht5w", f"{name}: back on 2 m both ends are one station again")
+
             # Links shared from the earlier version still open, with the same numbers and the panel showing.
             old = f"{app}/index.html?terrain={tiles}#a={a['lat']:.5f},{a['lon']:.5f}&b={b['lat']:.5f},{b['lon']:.5f}&preset=meshcore&f=869.618&p=0.158&ha=2&hb=2&ga=2&gb=2&ca=0&cb=0&sf=8&bw=62.5"
             page.goto(old)

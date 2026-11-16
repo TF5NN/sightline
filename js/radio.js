@@ -320,7 +320,10 @@ export function linkEstimate({ distances, ground, radio }) {
   };
   const aToB = direction(powerA, sensB);
   const bToA = direction(powerB, sensA);
-  const weaker = bToA.margin < aToB.margin ? 'bToA' : 'aToB';
+  // An end with no transmitter (a broadcast receiver) makes the link one-way:
+  // only the direction that exists is judged.
+  const oneWay = powerA > 0 && !(powerB > 0) ? 'aToB' : powerB > 0 && !(powerA > 0) ? 'bToA' : null;
+  const weaker = oneWay ?? (bToA.margin < aToB.margin ? 'bToA' : 'aToB');
   const { received, margin } = weaker === 'bToA' ? bToA : aToB;
   return {
     path,
@@ -332,7 +335,8 @@ export function linkEstimate({ distances, ground, radio }) {
     aToB,
     bToA,
     weaker,
-    twoWayDiffers: Math.abs(aToB.margin - bToA.margin) > 0.05,
+    oneWay,
+    twoWayDiffers: !oneWay && Math.abs(aToB.margin - bToA.margin) > 0.05,
     received,
     margin,
     verdict: verdictFor(margin),
