@@ -188,6 +188,28 @@ def main():
                 page.set_viewport_size(viewport)
                 page.wait_for_timeout(400)
 
+            # Satellite background: chosen in the corner of the map, kept in the address, and there again after a reload.
+            sat_on = "sightline.map.hasLayer(Object.values(sightline.map._layers).find((l) => l._url && l._url.includes('eox')) ?? {})"
+            check(not page.evaluate(sat_on), f"{name}: the map opens on the ordinary map")
+            page.evaluate("document.querySelectorAll('.leaflet-control-layers-base input')[1].click()")
+            page.wait_for_function(sat_on, timeout=5000)
+            check("bg=sat" in page.url, f"{name}: the satellite choice is kept in the page address")
+            if not phone:
+                # Share copies a link that holds everything.
+                page.context.grant_permissions(["clipboard-read", "clipboard-write"])
+                page.click("#share")
+                page.wait_for_function("document.getElementById('share').textContent === 'Link copied'", timeout=5000)
+                copied = page.evaluate("navigator.clipboard.readText()")
+                check(copied == page.url and "bg=sat" in copied and "a=" in copied and "band=2m" in copied, f"{name}: Share copies the full link")
+                page.goto("about:blank")
+                page.goto(copied)
+                page.wait_for_function(status_is("^Done\\."), timeout=30000)
+                check(page.evaluate(sat_on) and page.is_visible("#chart .main-svg"), f"{name}: the shared link opens the same path on the satellite picture")
+            page.screenshot(path=os.path.join(OUT, f"{name}-sat.png"))
+            page.evaluate("document.querySelectorAll('.leaflet-control-layers-base input')[0].click()")
+            page.wait_for_function(f"!({sat_on})", timeout=5000)
+            check("bg=sat" not in page.url, f"{name}: back on the ordinary map")
+
             # "Estimate radio link" opens the radio part, on the 2 m band with a 5 W handheld and rubber duck.
             page.click("#link-toggle")
             page.wait_for_selector("#link-panel", state="visible")

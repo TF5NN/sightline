@@ -90,6 +90,7 @@ const el = {
   locate: $('locate'),
   swap: $('swap'),
   clear: $('clear'),
+  share: $('share'),
   about: $('about'),
   aboutOpen: $('about-open'),
   powerUnit: $('power-unit'),
@@ -128,12 +129,38 @@ const state = {
 // --- map ---------------------------------------------------------------------
 
 const map = L.map('map', { zoomControl: true }).setView(START_VIEW.centre, START_VIEW.zoom);
-L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom: 19,
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-}).addTo(map);
+// Two backgrounds to choose from with the layers button in the corner of the map.
+const backgrounds = {
+  map: L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  }),
+  // Sentinel-2 satellite pictures, 10 m detail, free for non-commercial use with this credit.
+  sat: L.tileLayer('https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2024_3857/default/g/{z}/{y}/{x}.jpg', {
+    maxZoom: 19,
+    maxNativeZoom: 14, // the pictures stop here; closer in they are enlarged
+    attribution:
+      '<a href="https://cloudless.eox.at">EOxCloudless</a> by <a href="https://eox.at">EOX IT Services GmbH</a> (Contains modified Copernicus Sentinel data 2024)',
+  }),
+};
+let background = 'map';
+backgrounds.map.addTo(map);
+L.control.layers({ Map: backgrounds.map, Satellite: backgrounds.sat }, null, { position: 'topright' }).addTo(map);
+function showBackground(name) {
+  background = backgrounds[name] ? name : 'map';
+  for (const [key, layer] of Object.entries(backgrounds)) {
+    if (key === background) layer.addTo(map);
+    else layer.remove();
+  }
+}
+map.on('baselayerchange', (event) => {
+  background = event.layer === backgrounds.sat ? 'sat' : 'map';
+  writeAddress();
+});
 
 const markers = [];
+// A white edge under the path keeps it readable on the satellite picture.
+const pathEdge = L.polyline([], { color: '#ffffff', weight: 6, opacity: 0.75, interactive: false }).addTo(map);
 const pathLine = L.polyline([], { color: '#2f6fb7', weight: 3, opacity: 0.9 }).addTo(map);
 const problemLines = L.layerGroup().addTo(map);
 const hoverDot = L.circleMarker([0, 0], {
@@ -157,6 +184,7 @@ function pinIcon(label) {
 function drawPath() {
   if (state.waypoints.length < 2) {
     pathLine.setLatLngs([]);
+    pathEdge.setLatLngs([]);
     return;
   }
   const [a, b] = state.waypoints;
@@ -167,6 +195,7 @@ function drawPath() {
     line.push([p.lat, p.lon]);
   }
   pathLine.setLatLngs(line);
+  pathEdge.setLatLngs(line);
 }
 
 /**
@@ -239,6 +268,7 @@ function writeAddress() {
     (wp, i) => `${LABELS[i].toLowerCase()}=${wp.lat.toFixed(5)},${wp.lon.toFixed(5)}`,
   );
   parts.push(...settingsToAddress(state.settings));
+  if (background !== 'map') parts.push(`bg=${background}`);
   history.replaceState(null, '', `#${parts.join('&')}`);
 }
 
@@ -253,7 +283,7 @@ function readAddress() {
     if (Math.abs(lat) > 90 || Math.abs(lon) > 180) break;
     waypoints.push({ lat, lon });
   }
-  return { waypoints, settings: settingsFromAddress(params) };
+  return { waypoints, settings: settingsFromAddress(params), background: params.get('bg') ?? 'map' };
 }
 
 // --- small helpers -------------------------------------------------------------
@@ -816,6 +846,35 @@ el.clear.addEventListener('click', () => {
   pathChanged();
 });
 
+// Share: the page address already holds the points and every setting, so sharing is handing over the address.
+let shareTimer = null;
+function shareSaid(text) {
+  el.share.textContent = text;
+  clearTimeout(shareTimer);
+  shareTimer = setTimeout(() => {
+    el.share.textContent = 'Share';
+  }, 2500);
+}
+el.share.addEventListener('click', async () => {
+  writeAddress();
+  const url = location.href;
+  // Phones have their own share sheet (messages, mail, ...). Elsewhere the link is copied.
+  if (fingers && navigator.share) {
+    try {
+      await navigator.share({ title: 'Sightline', text: 'A path in Sightline', url });
+      return;
+    } catch (error) {
+      if (error?.name === 'AbortError') return; // closed the share sheet: nothing to do
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    shareSaid('Link copied');
+  } catch {
+    shareSaid('Copy the address bar');
+  }
+});
+
 el.swap.addEventListener('click', () => {
   state.waypoints.reverse();
   const s = state.settings;
@@ -874,9 +933,10 @@ window.addEventListener('hashchange', () => {
 
 // --- start -----------------------------------------------------------------------
 
-function start({ waypoints, settings }) {
+function start({ waypoints, settings, background: wanted }) {
   state.waypoints = waypoints;
   state.settings = settings;
+  showBackground(wanted);
   showSettings();
   if (waypoints.length === 2) {
     map.fitBounds(

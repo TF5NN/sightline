@@ -189,6 +189,24 @@ main {
   border-top: 1px solid var(--line);
 }
 
+#share {
+  margin-left: auto;
+}
+
+/* The map / satellite chooser in the corner of the map. */
+.leaflet-control-layers {
+  font: 500 0.85rem var(--sans);
+  color: var(--ink);
+}
+
+.leaflet-control-layers-expanded {
+  padding: 8px 12px;
+}
+
+.leaflet-control-layers label {
+  margin: 6px 0;
+}
+
 button {
   font: inherit;
   font-size: 0.9rem;
@@ -699,6 +717,10 @@ dialog li {
 
   .map-tools button {
     flex: 1 1 auto;
+  }
+
+  #share {
+    margin-left: 0;
   }
 
   .chart {
