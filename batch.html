@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#214e3a" />
+    <meta name="robots" content="noindex" />
+    <title>Sightline: batch link check</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+    <header class="header">
+      <a href="./" class="brand" aria-label="Sightline home">
+        <span class="brand-icon">
+          <svg viewBox="0 0 36 36" aria-hidden="true" focusable="false">
+            <path class="fill" d="M4 28 13 14.5 17.5 21.25 24.25 10 32 28Z" />
+            <path d="M6 9 30 6.75" />
+          </svg>
+        </span>
+        <h1>SIGHTLINE<small>BATCH LINK CHECK</small></h1>
+      </a>
+      <div class="header-right">
+        <a class="callsign" href="./">Back to the app</a>
+      </div>
+    </header>
+    <div class="report wide">
+      <p>
+        Checks the model against real links. Paste a list of stations with their positions and the links that were
+        actually measured between them. Every pair of stations is run through the same terrain and radio sums as the
+        app, and the prediction is set beside what was measured. Nothing you paste leaves this page.
+      </p>
+      <div class="fields">
+        <label>Antenna gain, both ends <span class="u">(dBi)</span>
+          <input id="gain" type="number" step="any" value="3" />
+        </label>
+        <label>Antenna height above the surface <span class="u">(m)</span>
+          <input id="height" type="number" step="any" min="0" value="3" inputmode="decimal" />
+        </label>
+        <label>Terrain detail
+          <select id="detail">
+            <option value="smart">Smart, like the app (more data, a few minutes)</option>
+            <option value="10m">10 m only (quick, rougher in town)</option>
+          </select>
+        </label>
+        <label class="wide">Stations and measured links <span class="u">(JSON)</span>
+          <textarea id="input" rows="8" spellcheck="false" placeholder='{"nodes":[{"id":"a","name":"Hill","lat":64.1,"lon":-21.9}],"links":[{"a":"a","b":"b","snr":5.2,"count":40}]}'></textarea>
+        </label>
+      </div>
+      <p>
+        <button id="run" type="button" class="primary">Run the check</button>
+        <button id="stop" type="button" disabled>Stop</button>
+        <button id="copy" type="button" disabled>Copy the report</button>
+      </p>
+      <p id="progress" class="status" role="status" aria-live="polite"></p>
+      <pre id="log" class="table"></pre>
+    </div>
+    </div>
+    <script src="vendor/geotiff.js"></script>
+    <script type="module" src="js/batch.js"></script>
+  </body>
+</html>

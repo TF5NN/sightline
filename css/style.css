@@ -751,3 +751,28 @@ dialog li {
     scroll-behavior: auto !important;
   }
 }
+
+/* Batch check page */
+.report textarea {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  font: 400 0.85rem var(--mono);
+  text-transform: none;
+  letter-spacing: 0;
+  color: #3d5547;
+  background: var(--field);
+  border: 1px solid var(--field-line);
+  border-radius: 5px;
+  padding: 9px 10px;
+}
+
+.report.wide {
+  max-width: none;
+}
+
+.report pre.table {
+  overflow-x: auto;
+  white-space: pre;
+  word-break: normal;
+}

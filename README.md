@@ -124,6 +124,15 @@ The checks read small made-up terrain tiles in `test/tiles/` whose true height
 is known everywhere, so the reader can be compared with the right answer.
 `python3 tools/make_test_tiles.py test/tiles` rebuilds them.
 
+## Checking the model against real links
+
+`batch.html` (not linked from the app) takes a pasted list of stations and the
+links measured between them, runs every pair through the same terrain and radio
+sums as the app, and prints predicted against measured SNR. It assumes the
+MeshCore EU/UK narrow setup with one antenna gain and height for all stations,
+so it shows which way the model leans, not whether one link is right. The lists
+themselves are other people's stations and are not kept in this repository.
+
 ## Checked against the real data
 
 `step0.html` on the published site reads the real ArcticDEM files and prints a

@@ -332,6 +332,21 @@ def main():
             check("No terrain data" in status, f"{name}: a path with no data says so ({status})")
             check("#a=" in page.url and "&b=" in page.url, f"{name}: clicked points are written to the page address")
 
+            # The batch check page works a small made-up list through the same sums.
+            if not phone:
+                mid = {"lat": (a["lat"] + b["lat"]) / 2, "lon": (a["lon"] + b["lon"]) / 2}
+                listing = {"nodes": [{"id": "a", "name": "North", **a}, {"id": "m", "name": "Middle", **mid}, {"id": "b", "name": "South", **b}],
+                           "links": [{"a": "a", "b": "m", "snr": 4.5, "count": 12}]}
+                page.goto(f"{app}/batch.html?terrain={tiles}")
+                page.fill("#input", json.dumps(listing))
+                page.click("#run")
+                page.wait_for_function("document.getElementById('log').textContent.includes('RESULT: DONE')", timeout=60000)
+                report = page.inner_text("#log")
+                check("3 pairs" in report and "LINKS THAT WERE MEASURED (1)" in report and "PAIRS WITH NO MEASURED LINK (2)" in report,
+                      f"{name}: the batch check works through every pair")
+                check("failed" not in report and "blocked" in report, f"{name}: the batch check finds the hill between the far ends")
+                open(os.path.join(OUT, "batch-report.txt"), "w").write(report)
+
             # The test page runs against the same tiles.
             page.goto(f"{app}/step0.html?terrain={tiles}")
             page.wait_for_function("document.getElementById('log').textContent.includes('RESULT:')", timeout=30000)
