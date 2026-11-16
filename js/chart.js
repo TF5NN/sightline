@@ -95,18 +95,35 @@ export function drawProfile(Plotly, element, view, { onHover, onLeave } = {}) {
 
   const config = { displayModeBar: false, responsive: true, scrollZoom: false, doubleClick: false };
 
-  Plotly.react(element, traces, layout, config);
-
-  // Plotly keeps old listeners across redraws, so clear ours before adding them again.
+  // Take the old listeners off BEFORE redrawing. If the pointer is resting on
+  // the chart, Plotly sends a fresh "hover" in the middle of the redraw, and an
+  // old listener would receive positions that belong to the new, longer profile.
   element.removeAllListeners?.('plotly_hover');
   element.removeAllListeners?.('plotly_unhover');
+
+  Plotly.react(element, traces, layout, config);
+
+  // A slip in a hover handler must never be able to break the chart or a download,
+  // so each one is fenced off.
+  const safely = (handler) => (event) => {
+    try {
+      handler(event);
+    } catch (error) {
+      console.warn('Chart hover handler failed', error);
+    }
+  };
   if (onHover) {
-    element.on('plotly_hover', (event) => {
-      const point = event.points.find((p) => p.curveNumber === 1) ?? event.points[0];
-      onHover(point.pointIndex);
-    });
+    element.on(
+      'plotly_hover',
+      safely((event) => {
+        const point = event.points.find((p) => p.curveNumber === 1) ?? event.points[0];
+        if (point && Number.isInteger(point.pointIndex) && point.pointIndex < view.km.length) {
+          onHover(point.pointIndex);
+        }
+      }),
+    );
   }
-  if (onLeave) element.on('plotly_unhover', onLeave);
+  if (onLeave) element.on('plotly_unhover', safely(onLeave));
 }
 
 export function clearProfile(Plotly, element) {

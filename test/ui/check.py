@@ -14,6 +14,7 @@ import json
 import os
 import sys
 import threading
+import time
 
 from playwright.sync_api import sync_playwright
 
@@ -30,6 +31,8 @@ class Quiet(http.server.SimpleHTTPRequestHandler):
 class TileHandler(Quiet):
     """Serves the test tiles the way the real storage does: byte ranges, cross-site allowed, 403 when absent."""
 
+    slow_2m = 0.0  # seconds to wait before answering a 2 m request (to imitate a slow connection)
+
     def end_headers(self):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Headers", "Range")
@@ -41,6 +44,8 @@ class TileHandler(Quiet):
         self.end_headers()
 
     def do_GET(self):
+        if TileHandler.slow_2m and "/2m/" in self.path:
+            time.sleep(TileHandler.slow_2m)
         path = self.translate_path(self.path)
         if not os.path.isfile(path):
             self.send_response(403)
@@ -115,6 +120,22 @@ def main():
             page.mouse.move(box["x"] + box["width"] * 0.5, box["y"] + box["height"] * 0.5)
             page.wait_for_function("document.getElementById('readout').textContent.includes('from A')", timeout=5000)
             check(True, f"{name}: hover readout ({page.inner_text('#readout')})")
+
+            # The 2 m detail must still load when the pointer is resting on the draft chart.
+            # (A real bug: while redrawing, the chart re-sent a "hover" to a listener that
+            # still held the shorter draft profile, and the load was reported as failed.)
+            TileHandler.slow_2m = 0.5
+            page.reload()
+            page.wait_for_function("document.getElementById('status').textContent.startsWith('Loading 2 m')", timeout=15000)
+            box = page.locator("#chart .nsewdrag").bounding_box()
+            page.mouse.move(box["x"] + box["width"] * 0.90, box["y"] + box["height"] * 0.5)
+            page.mouse.move(box["x"] + box["width"] * 0.95, box["y"] + box["height"] * 0.5)
+            page.wait_for_function("/^Done\\.|Could not load/.test(document.getElementById('status').textContent)", timeout=30000)
+            TileHandler.slow_2m = 0.0
+            status = page.inner_text("#status")
+            check(status.startswith("Done."), f"{name}: detail loads with the pointer on the draft chart ({status})")
+            page.mouse.move(box["x"] + box["width"] * 0.5, box["y"] + box["height"] * 0.5)
+            page.wait_for_function("document.getElementById('readout').textContent.includes('from A')", timeout=5000)
 
             # Stay-on-10-m switch.
             page.check("#fast")

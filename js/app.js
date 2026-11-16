@@ -189,6 +189,7 @@ function showProfile(profile, draft) {
   drawProfile(Plotly, el.chart, view, {
     onHover: (index) => {
       const p = profile.points[index];
+      if (!p) return; // a position that does not belong to this profile
       hoverDot.setLatLng([p.lat, p.lon]).addTo(map);
       const source = view.filled[index] ? ' (filled from coarser data)' : '';
       el.readout.textContent = `${fmtDistance(p.distance)} from A · ground ${fmtHeight(view.heights[index])}${source}`;
