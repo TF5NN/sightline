@@ -1,0 +1,17 @@
+{
+  "name": "sightline",
+  "version": "1.0.0",
+  "description": "Radio link terrain profile tool",
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "serve": "python3 -m http.server 8080"
+  },
+  "devDependencies": {
+    "egm96-universal": "^1.1.1",
+    "geotiff": "^3.0.5",
+    "leaflet": "^1.9.4",
+    "plotly.js-basic-dist-min": "^4.3.0"
+  },
+  "private": true,
+  "type": "module"
+}

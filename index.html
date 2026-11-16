@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sightline: terrain profiles for radio links</title>
+    <meta
+      name="description"
+      content="Click two points and see the terrain between them, from 2 m ArcticDEM data. For hams, mesh builders and anyone placing an antenna north of 60°N."
+    />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <header class="top">
+      <div class="brand">
+        <h1>Sightline</h1>
+        <p>The terrain between two points, from 2 m elevation data</p>
+      </div>
+      <button id="about-open" class="ghost" type="button">About</button>
+    </header>
+
+    <main>
+      <section class="map-wrap" aria-label="Map">
+        <div id="map"></div>
+        <div class="map-tools">
+          <button id="locate" type="button" title="Place a point where you are">My location</button>
+          <button id="swap" type="button" disabled>Swap A and B</button>
+          <button id="clear" type="button" disabled>Clear</button>
+        </div>
+      </section>
+
+      <section class="panel" aria-label="Terrain profile">
+        <p id="hint" class="hint">Tap the map to place point A, then point B. Drag a point to move it.</p>
+
+        <dl id="results" class="results" hidden>
+          <div><dt>Distance</dt><dd id="r-distance">–</dd></div>
+          <div><dt>Bearing A to B</dt><dd id="r-bearing">–</dd></div>
+          <div><dt>Ground at A</dt><dd id="r-a">–</dd></div>
+          <div><dt>Ground at B</dt><dd id="r-b">–</dd></div>
+          <div><dt>Highest point</dt><dd id="r-high">–</dd></div>
+          <div><dt>Terrain data</dt><dd id="r-data">–</dd></div>
+        </dl>
+
+        <div id="chart" class="chart" hidden></div>
+        <p id="readout" class="readout" hidden></p>
+
+        <div class="controls">
+          <label class="check">
+            <input id="fast" type="checkbox" />
+            Stay on 10 m data (faster, uses less mobile data)
+          </label>
+          <button id="load-detail" type="button" class="primary" hidden>Load 2 m detail</button>
+        </div>
+
+        <p id="status" class="status" role="status" aria-live="polite"></p>
+      </section>
+    </main>
+
+    <footer class="foot">
+      Terrain: ArcticDEM, Polar Geospatial Center. Map: © OpenStreetMap contributors.
+      <a href="step0.html">Data connection test</a>
+    </footer>
+
+    <dialog id="about">
+      <h2>About Sightline</h2>
+      <p>
+        Sightline draws the terrain along the straight path between two points. It reads 2 m elevation data directly
+        from the public ArcticDEM archive, which covers land north of about 60°N. Nothing is stored on a server: your
+        points live only in this page and in its address, which you can copy to share a path.
+      </p>
+      <p>
+        This is an early version. It shows the ground only. Line of sight, the Fresnel zone and a link estimate come
+        next.
+      </p>
+      <h3>Good to know</h3>
+      <ul>
+        <li>
+          The data is a surface model made from satellite images. Buildings and trees are part of the surface, as they
+          stood when the images were taken.
+        </li>
+        <li>
+          Heights are shown above sea level. The archive measures from a smooth reference shape instead, so Sightline
+          corrects it with the EGM96 sea-level model. Expect a metre or so of difference from local maps.
+        </li>
+        <li>
+          A dashed stretch of profile means the 2 m data had a hole there and the gap was filled from coarser data.
+        </li>
+      </ul>
+      <h3>Credits</h3>
+      <p>
+        DEMs provided by the Polar Geospatial Center under NSF-OPP awards 1043681, 1559691, 1542736, 1810976, and
+        2129685.
+      </p>
+      <p>
+        Porter, Claire, et al., 2023, “ArcticDEM, Version 4.1”,
+        <a href="https://doi.org/10.7910/DVN/3VDC4W" target="_blank" rel="noopener">https://doi.org/10.7910/DVN/3VDC4W</a>, Harvard Dataverse, V1.
+      </p>
+      <p>
+        Map tiles © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors. Built
+        with Leaflet, geotiff.js and Plotly. Made by TF5NN.
+      </p>
+      <form method="dialog"><button class="primary">Close</button></form>
+    </dialog>
+
+    <script src="vendor/leaflet/leaflet.js"></script>
+    <script src="vendor/geotiff.js"></script>
+    <script src="vendor/plotly-basic.min.js"></script>
+    <script type="module" src="js/app.js"></script>
+  </body>
+</html>

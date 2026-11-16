@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sightline: data connection test</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <header class="top">
+      <div class="brand">
+        <h1>Sightline: data connection test</h1>
+        <p>Checks that this browser can read the ArcticDEM terrain files directly</p>
+      </div>
+      <a href="./">Back to the app</a>
+    </header>
+    <div class="report">
+      <p>
+        This page reads a few small pieces of real terrain data around Esja, near Reykjavík, and reports what it finds:
+        whether the browser is allowed in, how the files are laid out, and how fast they answer. It downloads a few
+        megabytes at most.
+      </p>
+      <p id="verdict" class="verdict">Running…</p>
+      <p>
+        <button id="copy" type="button">Copy the report</button>
+        <button id="again" type="button">Run again</button>
+        <button id="full" type="button" disabled>Also time a full 2 m profile (about 18 km)</button>
+      </p>
+      <pre id="log"></pre>
+    </div>
+    <script src="vendor/geotiff.js"></script>
+    <script type="module" src="js/step0.js"></script>
+  </body>
+</html>
