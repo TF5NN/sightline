@@ -102,56 +102,95 @@ def main():
             page.on("response", lambda r: errors.append(f"{r.status} {r.url}") if r.status >= 400 and r.url.startswith(app) else None)
 
             url = f"{app}/index.html?terrain={tiles}#a={a['lat']:.5f},{a['lon']:.5f}&b={b['lat']:.5f},{b['lon']:.5f}"
+            status_is = lambda pattern: f"/{pattern}/.test(document.getElementById('status').textContent)"
             page.goto(url)
-            page.wait_for_function("document.getElementById('status').textContent.startsWith('Done.')", timeout=30000)
+            page.wait_for_function(status_is("^Done\\."), timeout=30000)
             status = page.inner_text("#status")
-            check("2 m data" in status, f"{name}: 2 m detail loads from a link ({status})")
+            check("2 m data on" in status, f"{name}: 2 m detail loads from a link ({status})")
+            check("filled from coarser data" in status, f"{name}: the hole is reported as filled")
             check(page.is_visible("#chart .main-svg"), f"{name}: the chart is drawn")
             distance = page.inner_text("#r-distance")
             check(distance.endswith("km") and 1.1 < float(distance.split()[0]) < 1.4, f"{name}: distance shown ({distance})")
-            data = page.inner_text("#r-data")
-            check("filled" in data, f"{name}: the hole is reported as filled ({data})")
-            ground = page.inner_text("#r-a")
-            check(ground.endswith(" m") and 150 < float(ground.split()[0]) < 400, f"{name}: ground height is above sea level, not above the ellipsoid ({ground})")
-            page.screenshot(path=os.path.join(OUT, f"{name}-profile.png"), full_page=True)
 
-            # Hovering the chart shows a readout and a dot on the map.
+            # The link: a hill stands between the two points, so 2 m masts are blocked.
+            check(page.inner_text("#r-path") == "Blocked", f"{name}: default 2 m masts are blocked by the hill ({page.inner_text('#r-path')})")
+            check("edge" in page.inner_text("#r-diffraction"), f"{name}: terrain loss is reported ({page.inner_text('#r-diffraction')})")
+            check(page.inner_text("#r-verdict") in ("Solid", "Good", "Marginal", "Unlikely"), f"{name}: a verdict is shown ({page.inner_text('#r-verdict')}, margin {page.inner_text('#r-margin')})")
+            check("above the line of sight" in page.inner_text("#readout"), f"{name}: worst spot is described ({page.inner_text('#readout')})")
+            check("preset=meshcore" in page.url and "f=869.618" in page.url, f"{name}: radio settings are kept in the page address")
+            page.screenshot(path=os.path.join(OUT, f"{name}-blocked.png"), full_page=True)
+
+            # Hovering the chart shows the real ground height and the clearance.
+            page.locator("#chart").scroll_into_view_if_needed()
             box = page.locator("#chart .nsewdrag").bounding_box()
             page.mouse.move(box["x"] + box["width"] * 0.5, box["y"] + box["height"] * 0.5)
-            page.wait_for_function("document.getElementById('readout').textContent.includes('from A')", timeout=5000)
-            check(True, f"{name}: hover readout ({page.inner_text('#readout')})")
+            page.wait_for_function("document.getElementById('readout').textContent.includes('· ground')", timeout=5000)
+            readout = page.inner_text("#readout")
+            ground = float(readout.split("ground ")[1].split(" m")[0])
+            check(150 < ground < 400, f"{name}: hover readout, ground above sea level not above the ellipsoid ({readout})")
+            page.mouse.move(5, 5)
+
+            # Raising both masts clears the hill; the terrain loss goes away.
+            margin_before = page.inner_text("#r-margin")
+            page.fill("#height-a", "80")
+            page.fill("#height-b", "80")
+            page.wait_for_function("document.getElementById('r-path').textContent === 'Clear'", timeout=15000)
+            check(page.inner_text("#r-diffraction") == "none", f"{name}: 80 m masts clear the hill (margin {margin_before} -> {page.inner_text('#r-margin')})")
+            page.screenshot(path=os.path.join(OUT, f"{name}-clear.png"), full_page=True)
+
+            # Changing the setup changes the sums: 2 m band has about 15.5 dB less free-space loss.
+            fsl_lora = float(page.inner_text("#r-fsl").split()[0])
+            page.select_option("#preset", "fm2m")
+            page.wait_for_function(f"parseFloat(document.getElementById('r-fsl').textContent) < {fsl_lora - 10}", timeout=15000)
+            fsl_vhf = float(page.inner_text("#r-fsl").split()[0])
+            check(abs((fsl_lora - fsl_vhf) - 15.5) < 0.3, f"{name}: switching to the 2 m band preset ({fsl_lora} -> {fsl_vhf} dB)")
+            check(page.is_hidden("#sf") and page.is_enabled("#sens"), f"{name}: LoRa boxes are hidden for an FM setup")
+            page.select_option("#power-unit", "dBm")
+            check(abs(float(page.input_value("#power")) - 37.0) < 0.05, f"{name}: 5 W shows as 37 dBm ({page.input_value('#power')})")
+            page.select_option("#preset", "meshcore")
+            page.wait_for_function("document.getElementById('sens').value === '-130'", timeout=5000)
+            page.select_option("#sf", "12")
+            page.wait_for_function("document.getElementById('sens').value === '-140'", timeout=5000)
+            check(True, f"{name}: spreading factor 12 moves the sensitivity to -140 dBm")
+            page.fill("#freq", "-5")
+            check("invalid" in (page.get_attribute("#freq", "class") or ""), f"{name}: an impossible frequency is flagged, not used")
+            page.fill("#freq", "869.618")
 
             # The 2 m detail must still load when the pointer is resting on the draft chart.
             # (A real bug: while redrawing, the chart re-sent a "hover" to a listener that
             # still held the shorter draft profile, and the load was reported as failed.)
             TileHandler.slow_2m = 0.5
+            page.goto(url)
             page.reload()
-            page.wait_for_function("document.getElementById('status').textContent.startsWith('Loading 2 m')", timeout=15000)
+            page.wait_for_function(status_is("^Loading 2 m"), timeout=15000)
+            page.locator("#chart").scroll_into_view_if_needed()
             box = page.locator("#chart .nsewdrag").bounding_box()
             page.mouse.move(box["x"] + box["width"] * 0.90, box["y"] + box["height"] * 0.5)
             page.mouse.move(box["x"] + box["width"] * 0.95, box["y"] + box["height"] * 0.5)
-            page.wait_for_function("/^Done\\.|Could not load/.test(document.getElementById('status').textContent)", timeout=30000)
+            page.wait_for_function(status_is("^Done\\.|went wrong"), timeout=30000)
             TileHandler.slow_2m = 0.0
             status = page.inner_text("#status")
             check(status.startswith("Done."), f"{name}: detail loads with the pointer on the draft chart ({status})")
-            page.mouse.move(box["x"] + box["width"] * 0.5, box["y"] + box["height"] * 0.5)
-            page.wait_for_function("document.getElementById('readout').textContent.includes('from A')", timeout=5000)
 
-            # Stay-on-10-m switch.
-            page.check("#fast")
-            page.wait_for_function("document.getElementById('status').textContent.startsWith('Showing 10 m data')", timeout=15000)
-            check("10 m draft" in page.inner_text("#r-data"), f"{name}: the 10 m switch works")
-            check("fast=1" in page.url, f"{name}: the switch is kept in the page address")
+            # Terrain detail choices under Advanced.
+            page.click("#advanced summary")
+            page.select_option("#detail", "10m")
+            page.wait_for_function(status_is("^Done, on 10 m data only"), timeout=15000)
+            check("detail=10m" in page.url, f"{name}: 10 m only works and is kept in the page address")
+            page.select_option("#detail", "full")
+            page.wait_for_function(status_is("^Done\\. .*2 m data on"), timeout=15000)
+            check(True, f"{name}: full 2 m works ({page.inner_text('#status')})")
+            page.select_option("#detail", "smart")
+            page.wait_for_function(status_is("^Done\\."), timeout=15000)
 
-            # Clear, then place two points by clicking the map (outside the test tiles: no data).
+            # Clear, then place two points by clicking the map (out at sea: no data).
             page.click("#clear")
             check(page.is_hidden("#chart"), f"{name}: Clear removes the profile")
-            page.uncheck("#fast")
             page.evaluate("sightline.map.setView([62, -30], 9, { animate: false })")  # open ocean
             mbox = page.locator("#map").bounding_box()
             page.mouse.click(mbox["x"] + mbox["width"] * 0.3, mbox["y"] + mbox["height"] * 0.4)
             page.mouse.click(mbox["x"] + mbox["width"] * 0.7, mbox["y"] + mbox["height"] * 0.6)
-            page.wait_for_function("/No terrain|Done\\.|Could not|Showing/.test(document.getElementById('status').textContent)", timeout=20000)
+            page.wait_for_function(status_is("No terrain|^Done|Could not|went wrong"), timeout=20000)
             status = page.inner_text("#status")
             check("No terrain data" in status, f"{name}: a path with no data says so ({status})")
             check("#a=" in page.url and "&b=" in page.url, f"{name}: clicked points are written to the page address")

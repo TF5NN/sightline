@@ -9,19 +9,41 @@ Sightline is a plain web page. There is no server and no build step: the
 browser fetches only the small pieces of the terrain files that lie under your
 path.
 
-**Status: step 1 of the build.** It draws the ground profile. Line of sight,
-the Fresnel zone and a link estimate are next.
+**Status: step 2 of the build.** It draws the profile with the line of sight
+and Fresnel zone, marks grazing and blocked stretches, and estimates the link
+(free-space loss, terrain loss, received signal, margin, verdict).
 
 ## How it works
 
-1. You place point A and point B.
-2. A draft profile is drawn from the 10 m layer (a small download).
-3. The app works out how big the 2 m download would be. Under 15 MB it loads
-   by itself; above that it asks first.
-4. Holes in the 2 m data are filled from the draft and drawn dotted.
+1. You place point A and point B and pick a radio setup.
+2. A draft is drawn from the 10 m layer and the link is worked out.
+3. "Smart detail" then reads 2 m data only where it can change the answer:
+   the first and last 2 km, and wherever the ground comes within one Fresnel
+   radius of the line of sight. Under 15 MB it loads by itself; above that it
+   asks first.
+4. The link is worked out again on the mixed 10 m / 2 m profile.
+
+Under Advanced you can ask for 2 m on the whole path, 10 m only, a different
+sample limit, or a different Earth radius factor.
 
 Heights are shown above sea level. The data itself is measured from the WGS84
 ellipsoid, so the app corrects it with a coarse EGM96 table (`js/geoid-data.js`).
+
+### The radio model, in short
+
+- Earth curvature is added to the terrain (k = 4/3 by default), so the line of
+  sight is straight.
+- Clear / grazing / blocked: grazing means the ground is inside 60% of the
+  first Fresnel zone; blocked means it is above the line of sight.
+- Terrain loss: knife-edge diffraction (ITU-R P.526 approximation) on the worst
+  obstacle, then on the worst one on each side of it. Three edges at most.
+- Margin = transmit power + gains - cable losses - free-space loss - terrain
+  loss - receiver sensitivity. Verdict bands: 20 dB solid, 10 dB good, 0 dB
+  marginal, below that unlikely. These bands are a starting proposal.
+- LoRa sensitivity is worked out from spreading factor and bandwidth.
+
+It does not model reflections, vegetation growth, snow or receiver noise.
+Read the margin as give or take 10 dB.
 
 ## Files
 
@@ -31,7 +53,9 @@ ellipsoid, so the app corrects it with a coarse EGM96 table (`js/geoid-data.js`)
 | `js/app.js` | Map, waypoints, the order things happen in |
 | `js/terrain.js` | Opens terrain files, fetches and remembers blocks, returns heights |
 | `js/tiles.js` | Where the files live and how they are named. The one place to change if PGC changes its layout |
-| `js/profile.js` | Samples a path, fills holes |
+| `js/radio.js` | Curvature, Fresnel zone, diffraction, link budget, and where 2 m data is worth fetching. Pure maths |
+| `js/settings.js` | Radio presets and how settings are kept in the page address |
+| `js/profile.js` | Samples a path, fills holes, stitches 10 m and 2 m data into one profile |
 | `js/geo.js`, `js/projection.js`, `js/geoid.js` | Distances and bearings, map-grid conversion, sea-level correction. Pure maths |
 | `js/chart.js` | The profile chart |
 | `step0.html`, `js/step0.js` | Data connection test: can this browser read the real files, and how are they laid out? |
@@ -52,7 +76,7 @@ not work; browsers only load this kind of page from a web address.)
 
 ```
 npm install
-npm test                       # maths and terrain reader, a second or two
+npm run check                  # type check, then maths and terrain reader; a few seconds
 python3 test/ui/check.py       # the whole app in headless Chrome (needs: pip install playwright)
 ```
 
@@ -60,11 +84,11 @@ The checks read small made-up terrain tiles in `test/tiles/` whose true height
 is known everywhere, so the reader can be compared with the right answer.
 `python3 tools/make_test_tiles.py test/tiles` rebuilds them.
 
-## Things taken on trust
+## Checked against the real data
 
-The file naming in `js/tiles.js` (for example `2m/14_52/14_52_2_1_2m_v4.1_dem.tif`)
-could not be checked against the real storage while this was written. Open
-`step0.html` on the published site: it tests exactly that and prints a report.
+`step0.html` on the published site reads the real ArcticDEM files and prints a
+report. It passed on 16 November 2026: partial reads work from GitHub Pages,
+and the file naming in `js/tiles.js` matches the real storage.
 
 ## Credits
 

@@ -1,5 +1,6 @@
-# Runs the automatic checks on every push: geometry, map projection, tile
-# naming, and the terrain reader against small stand-in tiles.
+# Runs the automatic checks on every push: a type check, then geometry, map
+# projection, tile naming, radio maths, settings, and the terrain reader
+# against small stand-in tiles.
 name: Tests
 on:
   push:
@@ -14,4 +15,5 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run typecheck
       - run: npm test

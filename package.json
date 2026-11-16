@@ -4,13 +4,16 @@
   "description": "Radio link terrain profile tool",
   "scripts": {
     "test": "node --test test/*.test.mjs",
+    "typecheck": "tsc -p tsconfig.json",
+    "check": "npm run typecheck && npm test",
     "serve": "python3 -m http.server 8080"
   },
   "devDependencies": {
     "egm96-universal": "^1.1.1",
     "geotiff": "^3.0.5",
     "leaflet": "^1.9.4",
-    "plotly.js-basic-dist-min": "^4.3.0"
+    "plotly.js-basic-dist-min": "^4.3.0",
+    "typescript": "^7.0.2"
   },
   "private": true,
   "type": "module"

@@ -1,0 +1,28 @@
+{
+  "//": "Type check only: nothing is built. 'npm run typecheck' reads the maths and terrain modules and reports slips such as a misspelt property or a function called with the wrong number of values. The page code (app.js, chart.js, step0.js) is covered by the browser check instead.",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "strict": false,
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "skipLibCheck": true
+  },
+  "include": [
+    "js/geo.js",
+    "js/projection.js",
+    "js/tiles.js",
+    "js/geoid.js",
+    "js/radio.js",
+    "js/profile.js",
+    "js/settings.js",
+    "js/terrain.js"
+  ]
+}

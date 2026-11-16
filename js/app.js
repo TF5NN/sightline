@@ -1,28 +1,63 @@
-// The page itself: the map, the two waypoints, and the order things happen in.
+// The page itself: the map, the two waypoints, the radio settings, and the
+// order things happen in.
 //
 // When both points are placed it:
-//   1. draws a quick draft from the 10 m data,
-//   2. works out how big the 2 m download would be,
-//   3. loads the 2 m detail straight away if it is small, or offers a button if not.
+//   1. draws a draft from the 10 m data and works out the link,
+//   2. decides where 2 m data would change the answer (near both antennas and
+//      wherever the ground comes close to the Fresnel zone),
+//   3. loads just those stretches (asking first if the download is large),
+//      and works the link out again.
+// Changing a radio setting redoes the sums at once and only downloads more
+// terrain if the new settings need stretches that were not loaded before.
 //
 // L (Leaflet), GeoTIFF and Plotly are loaded by index.html before this file.
 
 import { clearProfile, drawProfile } from './chart.js';
 import { geodesicDistance, initialBearing, pointAlong } from './geo.js';
 import { seaLevelOffset } from './geoid.js';
-import { SOURCE_FILLED, buildProfile, fillGaps, heightRange, pathSamples } from './profile.js';
+import {
+  FROM_10M,
+  FROM_2M,
+  FROM_FILL,
+  buildProfile,
+  composeTrack,
+  detailSpacing,
+  fillGaps,
+  heightRange,
+  stretchSamples,
+} from './profile.js';
+import {
+  STATUS_BLOCKED,
+  STATUS_GRAZING,
+  dbmToWatts,
+  detailStretches,
+  linkEstimate,
+  mergeStretches,
+  subtractStretches,
+  wattsToDbm,
+} from './radio.js';
+import {
+  DEFAULT_PRESET,
+  PRESETS,
+  settingsForPreset,
+  settingsFromAddress,
+  settingsToAddress,
+  withSensitivity,
+} from './settings.js';
 import { createTerrain } from './terrain.js';
 
 const { L, GeoTIFF, Plotly } = globalThis;
 
-// --- settings ----------------------------------------------------------------
+// --- fixed choices -----------------------------------------------------------
 
 const START_VIEW = { centre: [64.9, -18.6], zoom: 6 }; // Iceland
 const DRAFT_MAX_SAMPLES = 4000;
-const DETAIL_MAX_SAMPLES = 20000;
 // 2 m detail loads on its own when the download is smaller than this. Above it
 // the app asks first, so nobody burns mobile data by accident.
 const AUTO_DETAIL_BYTES = 15_000_000;
+// After the first round of 2 m data, the answer can shift enough to make a
+// new stretch "close". Look again this many times at most.
+const DETAIL_PASSES = 3;
 const LABELS = ['A', 'B'];
 
 // --- page elements ---------------------------------------------------------
@@ -31,16 +66,45 @@ const $ = (id) => document.getElementById(id);
 const el = {
   hint: $('hint'),
   results: $('results'),
+  verdictBox: $('verdict-box'),
   chart: $('chart'),
   readout: $('readout'),
+  legend: $('legend'),
   status: $('status'),
-  fast: $('fast'),
   loadDetail: $('load-detail'),
   locate: $('locate'),
   swap: $('swap'),
   clear: $('clear'),
   about: $('about'),
   aboutOpen: $('about-open'),
+  preset: $('preset'),
+  powerUnit: $('power-unit'),
+  sensNote: $('sens-note'),
+};
+// Number boxes, and the setting each one edits.
+const FIELDS = {
+  freq: 'freqMHz',
+  'height-a': 'heightA',
+  'height-b': 'heightB',
+  'gain-a': 'gainA',
+  'gain-b': 'gainB',
+  'cable-a': 'cableA',
+  'cable-b': 'cableB',
+  sens: 'sensitivity',
+  'max-samples': 'maxSamples',
+  k: 'k',
+};
+const FIELD_LIMITS = {
+  freqMHz: [1, 100000],
+  heightA: [0, 1000],
+  heightB: [0, 1000],
+  gainA: [-30, 60],
+  gainB: [-30, 60],
+  cableA: [0, 100],
+  cableB: [0, 100],
+  sensitivity: [-200, 0],
+  maxSamples: [2000, 200000],
+  k: [0.5, 10],
 };
 
 // --- state -------------------------------------------------------------------
@@ -48,14 +112,17 @@ const el = {
 // For development: ?terrain=http://localhost:8081 reads tiles from another address.
 const terrainOverride = new URLSearchParams(location.search).get('terrain');
 const terrain = createTerrain(terrainOverride ? { GeoTIFF, baseUrl: terrainOverride } : { GeoTIFF });
+
 const state = {
   waypoints: [], // { lat, lon }, at most two for now
-  fast: false,
-  run: 0, // goes up every time the path changes, so old downloads can be ignored
+  settings: settingsForPreset(DEFAULT_PRESET),
+  run: 0, // goes up every time something changes, so old downloads can be ignored
   controller: null,
-  draft: null,
-  shown: null, // the profile currently on screen, with sea-level heights
-  pendingDetail: null,
+  draft: null, // the 10 m profile of the current path
+  stretches: [], // 2 m stretches loaded so far for the current path
+  approved: false, // has the user said yes to a large 2 m download for this path?
+  shown: null, // what is on screen: { track, ground, link }
+  pending: false,
 };
 
 // --- map ---------------------------------------------------------------------
@@ -67,7 +134,8 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(map);
 
 const markers = [];
-const pathLine = L.polyline([], { color: '#267c62', weight: 3, opacity: 0.9 }).addTo(map);
+const pathLine = L.polyline([], { color: '#2f6fb7', weight: 3, opacity: 0.9 }).addTo(map);
+const problemLines = L.layerGroup().addTo(map);
 const hoverDot = L.circleMarker([0, 0], {
   radius: 6,
   color: '#ffffff',
@@ -101,6 +169,36 @@ function drawPath() {
   pathLine.setLatLngs(line);
 }
 
+/** Colour the grazing and blocked stretches of the path on the map. */
+function drawProblemsOnMap(track, status) {
+  problemLines.clearLayers();
+  let current = null;
+  const finish = () => {
+    if (current && current.points.length > 1) {
+      L.polyline(current.points, {
+        color: current.kind === STATUS_BLOCKED ? '#c0392b' : '#d98a00',
+        weight: 6,
+        opacity: 0.95,
+        interactive: false,
+      }).addTo(problemLines);
+    }
+    current = null;
+  };
+  for (let i = 0; i < status.length; i++) {
+    const kind = status[i];
+    if (kind !== STATUS_GRAZING && kind !== STATUS_BLOCKED) {
+      finish();
+      continue;
+    }
+    if (!current || current.kind !== kind) {
+      finish();
+      current = { kind, points: i > 0 ? [[track.lat[i - 1], track.lon[i - 1]]] : [] };
+    }
+    current.points.push([track.lat[i], track.lon[i]]);
+  }
+  finish();
+}
+
 function syncMarkers() {
   while (markers.length > state.waypoints.length) markers.pop().remove();
   state.waypoints.forEach((wp, index) => {
@@ -111,6 +209,7 @@ function syncMarkers() {
         state.waypoints[index] = { lat: pos.lat, lon: pos.lng };
         drawPath();
       });
+      marker.on('dragstart', () => problemLines.clearLayers());
       marker.on('dragend', () => pathChanged());
       markers[index] = marker;
     } else {
@@ -129,15 +228,14 @@ map.on('click', (event) => {
   pathChanged();
 });
 
-// --- page address (so a path can be shared as a link) -------------------------
+// --- page address (so a setup can be shared as a link) -----------------------
 
 function writeAddress() {
   const parts = state.waypoints.map(
     (wp, i) => `${LABELS[i].toLowerCase()}=${wp.lat.toFixed(5)},${wp.lon.toFixed(5)}`,
   );
-  if (state.fast) parts.push('fast=1');
-  const address = parts.length ? `#${parts.join('&')}` : location.pathname + location.search;
-  history.replaceState(null, '', address);
+  parts.push(...settingsToAddress(state.settings));
+  history.replaceState(null, '', `#${parts.join('&')}`);
 }
 
 function readAddress() {
@@ -151,7 +249,7 @@ function readAddress() {
     if (Math.abs(lat) > 90 || Math.abs(lon) > 180) break;
     waypoints.push({ lat, lon });
   }
-  return { waypoints, fast: params.get('fast') === '1' };
+  return { waypoints, settings: settingsFromAddress(params) };
 }
 
 // --- small helpers -------------------------------------------------------------
@@ -164,66 +262,124 @@ function setStatus(text, problem = false) {
 const fmtDistance = (m) => (m < 1000 ? `${m.toFixed(0)} m` : `${(m / 1000).toFixed(2)} km`);
 const fmtHeight = (h) => (Number.isFinite(h) ? `${Math.round(h)} m` : 'no data');
 const fmtMB = (bytes) => `${(bytes / 1e6).toFixed(bytes < 10e6 ? 1 : 0)} MB`;
+const fmtDb = (db) => `${db.toFixed(1)} dB`;
+const signed = (n, digits = 1) => `${n >= 0 ? '+' : '−'}${Math.abs(n).toFixed(digits)}`;
 const isCancel = (error) => error?.name === 'AbortError' || /abort/i.test(String(error?.message ?? ''));
+const SOURCE_WORDS = { [FROM_10M]: '10 m data', [FROM_2M]: '2 m data', [FROM_FILL]: 'filled from coarser data' };
 
-/** Turn a raw profile (heights above the ellipsoid) into what the chart shows. */
-function toView(profile, draft) {
-  const n = profile.heights.length;
-  const km = new Array(n);
-  const heights = new Float32Array(n);
-  const filled = new Array(n);
-  for (let i = 0; i < n; i++) {
-    const p = profile.points[i];
-    km[i] = p.distance / 1000;
-    heights[i] = profile.heights[i] - seaLevelOffset(p.lat, p.lon);
-    filled[i] = profile.source[i] === SOURCE_FILLED;
-  }
-  return { km, heights, filled, draft, profile };
+function radioFromSettings() {
+  const s = state.settings;
+  return {
+    freqMHz: s.freqMHz,
+    powerW: s.powerW,
+    gainA: s.gainA,
+    gainB: s.gainB,
+    cableA: s.cableA,
+    cableB: s.cableB,
+    heightA: s.heightA,
+    heightB: s.heightB,
+    sensitivity: s.sensitivity,
+    k: s.k,
+  };
 }
 
-function showProfile(profile, draft) {
-  const view = toView(profile, draft);
-  state.shown = view;
+// --- drawing the result ----------------------------------------------------------
+
+/** Work the link out from the terrain loaded so far and put it on screen. */
+function render() {
+  const track = composeTrack(state.draft, state.stretches);
+  const n = track.distance.length;
+  // Heights above sea level (the files hold heights above the ellipsoid).
+  const ground = new Float32Array(n);
+  for (let i = 0; i < n; i++) ground[i] = track.height[i] - seaLevelOffset(track.lat[i], track.lon[i]);
+
+  const km = Array.from(track.distance, (d) => d / 1000);
+  const [a, b] = state.waypoints;
+  const endsKnown = Number.isFinite(ground[0]) && Number.isFinite(ground[n - 1]);
+  const link = endsKnown ? linkEstimate({ distances: track.distance, ground, radio: radioFromSettings() }) : null;
+  state.shown = { track, ground, link };
+
   el.chart.hidden = false;
   el.readout.hidden = false;
+  el.legend.hidden = !link;
+  el.results.hidden = false;
+
+  const view = link
+    ? {
+        km,
+        terrain: link.path.terrain,
+        los: link.path.los,
+        fresnel: link.path.fresnel,
+        status: link.path.status,
+        edges: link.diffraction.edges.map((e) => ({ km: e.distance / 1000, height: e.height, loss: e.loss })),
+        masts: { baseA: ground[0], tipA: link.path.tipA, baseB: ground[n - 1], tipB: link.path.tipB },
+      }
+    : { km, terrain: ground };
+
+  const summary = link ? tightestSpotText(track, link) : '';
+  el.readout.textContent = summary;
   drawProfile(Plotly, el.chart, view, {
     onHover: (index) => {
-      const p = profile.points[index];
-      if (!p) return; // a position that does not belong to this profile
-      hoverDot.setLatLng([p.lat, p.lon]).addTo(map);
-      const source = view.filled[index] ? ' (filled from coarser data)' : '';
-      el.readout.textContent = `${fmtDistance(p.distance)} from A · ground ${fmtHeight(view.heights[index])}${source}`;
+      if (index >= n) return;
+      hoverDot.setLatLng([track.lat[index], track.lon[index]]).addTo(map);
+      let text = `${fmtDistance(track.distance[index])} from A · ground ${fmtHeight(ground[index])}`;
+      if (link && link.path.fresnel[index] > 0 && Number.isFinite(ground[index])) {
+        const c = link.path.clearance[index];
+        const share = (c / link.path.fresnel[index]) * 100;
+        text +=
+          c >= 0
+            ? ` · ${c.toFixed(0)} m below the line of sight (${share.toFixed(0)}% of the Fresnel radius)`
+            : ` · ${(-c).toFixed(0)} m above the line of sight`;
+      }
+      if (SOURCE_WORDS[track.source[index]]) text += ` · ${SOURCE_WORDS[track.source[index]]}`;
+      el.readout.textContent = text;
     },
     onLeave: () => {
       hoverDot.remove();
-      el.readout.textContent = '';
+      el.readout.textContent = summary;
     },
   });
 
-  const [a, b] = state.waypoints;
-  const range = heightRange(view.heights);
-  const filledShare = view.filled.filter(Boolean).length / view.filled.length;
-  $('r-distance').textContent = fmtDistance(profile.total);
+  $('r-distance').textContent = fmtDistance(track.total);
   $('r-bearing').textContent = `${initialBearing(a, b).toFixed(0)}°`;
-  $('r-a').textContent = fmtHeight(view.heights[0]);
-  $('r-b').textContent = fmtHeight(view.heights[view.heights.length - 1]);
-  $('r-high').textContent = range ? fmtHeight(range.max) : 'no data';
-  $('r-data').textContent =
-    (draft ? '10 m draft' : `2 m, every ${profile.spacing.toFixed(1)} m`) +
-    (filledShare > 0.001 ? `, ${(filledShare * 100).toFixed(0)}% filled` : '');
-  el.results.hidden = false;
+  el.verdictBox.className = 'verdict-box';
+  if (!link) {
+    for (const id of ['r-verdict', 'r-margin', 'r-received', 'r-fsl', 'r-diffraction', 'r-path']) $(id).textContent = '–';
+    problemLines.clearLayers();
+    return;
+  }
+  $('r-verdict').textContent = link.verdict.word;
+  el.verdictBox.classList.add(link.verdict.key);
+  $('r-margin').textContent = `${signed(link.margin)} dB`;
+  $('r-received').textContent = `${signed(link.received)} dBm`;
+  $('r-fsl').textContent = fmtDb(link.freeSpaceLoss);
+  const edges = link.diffraction.edges.length;
+  $('r-diffraction').textContent =
+    edges === 0 ? 'none' : `${fmtDb(link.diffraction.total)}, ${edges} edge${edges > 1 ? 's' : ''}`;
+  $('r-path').textContent = ['Clear', 'Grazing', 'Blocked'][link.path.overall];
+  drawProblemsOnMap(track, link.path.status);
+}
+
+function tightestSpotText(track, link) {
+  const i = link.path.worstIndex;
+  if (i < 0) return '';
+  const where = fmtDistance(track.distance[i]);
+  const c = link.path.clearance[i];
+  if (c < 0) return `Worst spot: ${where} from A, ground ${(-c).toFixed(0)} m above the line of sight.`;
+  const share = (link.path.worstRatio * 100).toFixed(0);
+  return `Tightest spot: ${where} from A, ground ${c.toFixed(0)} m below the line of sight (${share}% of the Fresnel radius).`;
 }
 
 function hideProfile() {
   state.shown = null;
-  state.draft = null;
-  state.pendingDetail = null;
   el.results.hidden = true;
   el.chart.hidden = true;
   el.readout.hidden = true;
+  el.legend.hidden = true;
   el.readout.textContent = '';
   el.loadDetail.hidden = true;
   hoverDot.remove();
+  problemLines.clearLayers();
   clearProfile(Plotly, el.chart);
 }
 
@@ -234,11 +390,24 @@ function explainNoData(problems) {
   return 'No terrain data on this path. ArcticDEM covers land north of about 60°N.';
 }
 
+function dataSummary() {
+  const { track } = state.shown;
+  const count = (code) => track.source.reduce((sum, s) => sum + (s === code ? 1 : 0), 0);
+  const fine = count(FROM_2M);
+  const filled = count(FROM_FILL);
+  const covered = mergeStretches(state.stretches.map((s) => [s.from, s.to])).reduce((sum, [f, t]) => sum + (t - f), 0);
+  let text = `${track.distance.length.toLocaleString('en')} samples`;
+  if (fine > 0) text += `, 2 m data on ${fmtDistance(covered)} of the path`;
+  else text += ', 10 m data';
+  if (filled > 0) text += `, ${filled.toLocaleString('en')} filled from coarser data`;
+  return text;
+}
+
 // --- the main sequence -----------------------------------------------------------
 
-async function pathChanged() {
+/** The waypoints changed: forget the old terrain and start over. */
+function pathChanged() {
   syncMarkers();
-  writeAddress();
   el.swap.disabled = state.waypoints.length < 2;
   el.clear.disabled = state.waypoints.length === 0;
   el.hint.hidden = state.waypoints.length >= 2;
@@ -246,13 +415,25 @@ async function pathChanged() {
   if (state.waypoints.length === 0) {
     el.hint.textContent = 'Tap the map to place point A, then point B. Drag a point to move it.';
   }
+  state.draft = null;
+  state.stretches = [];
+  state.approved = false;
+  hideProfile();
+  return update();
+}
 
-  // Anything still downloading for the old path is no longer wanted.
+/** Something changed (waypoints or settings): bring the screen up to date. */
+async function update() {
+  writeAddress();
+  // Anything still downloading for the old situation is no longer wanted.
   state.controller?.abort();
   state.run += 1;
-  hideProfile();
-  setStatus('');
-  if (state.waypoints.length < 2) return;
+  state.pending = false;
+  el.loadDetail.hidden = true;
+  if (state.waypoints.length < 2) {
+    setStatus('');
+    return;
+  }
 
   const run = state.run;
   const controller = new AbortController();
@@ -266,117 +447,209 @@ async function pathChanged() {
   }
 
   try {
-    // 1. Quick draft from the 10 m layer.
-    setStatus('Reading the 10 m draft…');
-    const draft = await buildProfile({
-      terrain,
-      a,
-      b,
-      layerId: '10m',
-      maxSamples: DRAFT_MAX_SAMPLES,
-      signal: controller.signal,
-    });
-    if (!stillCurrent()) return;
-
-    // Holes in the draft are filled from the 32 m layer.
-    if (draft.coverage < 1) {
-      const coarse = await buildProfile({
+    // 1. Draft from the 10 m layer (only when the path itself changed).
+    if (!state.draft) {
+      setStatus('Reading the 10 m draft…');
+      const draft = await buildProfile({
         terrain,
         a,
         b,
-        layerId: '32m',
+        layerId: '10m',
         maxSamples: DRAFT_MAX_SAMPLES,
         signal: controller.signal,
       });
       if (!stillCurrent()) return;
-      fillGaps(draft, coarse);
-      if (coarse.problems.blocked > 0) draft.problems.blocked += coarse.problems.blocked;
+      // Holes in the draft are filled from the 32 m layer.
+      if (draft.coverage < 1) {
+        const coarse = await buildProfile({
+          terrain,
+          a,
+          b,
+          layerId: '32m',
+          maxSamples: DRAFT_MAX_SAMPLES,
+          signal: controller.signal,
+        });
+        if (!stillCurrent()) return;
+        fillGaps(draft, coarse);
+        if (coarse.problems.blocked > 0) draft.problems.blocked += coarse.problems.blocked;
+      }
+      if (!heightRange(draft.heights)) {
+        setStatus(explainNoData(draft.problems), true);
+        return;
+      }
+      state.draft = draft;
     }
-
-    if (!heightRange(draft.heights)) {
-      setStatus(explainNoData(draft.problems), true);
+    render();
+    if (!state.shown.link) {
+      setStatus('There is no terrain data under one of the two points, so the link cannot be worked out.', true);
       return;
     }
-    state.draft = draft;
-    showProfile(draft, true);
 
-    if (state.fast) {
-      setStatus('Showing 10 m data. Untick the box above to load 2 m detail.');
+    // 2 and 3. Load 2 m data where it matters, then look again.
+    if (state.settings.detail === '10m') {
+      setStatus(`Done, on 10 m data only. ${dataSummary()}.`);
       return;
     }
+    for (let pass = 0; pass < DETAIL_PASSES; pass++) {
+      const { track, link } = state.shown;
+      const wanted =
+        state.settings.detail === 'full'
+          ? [[0, track.total]]
+          : detailStretches({ distances: track.distance, path: link.path, diffraction: link.diffraction });
+      const have = state.stretches.map((s) => [s.from, s.to]);
+      const missing = subtractStretches(wanted, have);
+      if (missing.length === 0) break;
 
-    // 2. How big would the 2 m download be?
-    setStatus('Checking the size of the 2 m detail…');
-    const samples = pathSamples(a, b, '2m', DETAIL_MAX_SAMPLES);
-    const cost = await terrain.estimate('2m', samples.grid);
-    if (!stillCurrent()) return;
+      const spacing = detailSpacing(wanted, state.draft.heights.length, state.settings.maxSamples);
+      const sets = missing.map(([from, to]) => stretchSamples(a, b, track.total, from, to, spacing));
+      const grid = sets.flatMap((s) => s.grid);
 
-    if (cost.blocks === 0) {
-      setStatus('Showing 10 m data. There is no 2 m data on this path.');
-      return;
+      if (pass === 0) setStatus('Checking the size of the 2 m detail…');
+      const cost = await terrain.estimate('2m', grid);
+      if (!stillCurrent()) return;
+      if (cost.blocks === 0) {
+        setStatus(`Done. There is no 2 m data on this path. ${dataSummary()}.`);
+        return;
+      }
+      if (cost.bytesToFetch > AUTO_DETAIL_BYTES && !state.approved) {
+        const size = `about ${fmtMB(cost.bytesToFetch)}`;
+        state.pending = true;
+        el.loadDetail.textContent = `Load 2 m detail (${size})`;
+        el.loadDetail.hidden = false;
+        setStatus(`Showing the result so far. The 2 m detail for this path is a larger download: ${size}.`);
+        return;
+      }
+
+      setStatus('Loading 2 m detail…');
+      const result = await terrain.sample('2m', grid, {
+        signal: controller.signal,
+        onProgress: (done, total) => {
+          if (stillCurrent()) setStatus(`Loading 2 m detail… ${done} of ${total} blocks`);
+        },
+      });
+      if (!stillCurrent()) return;
+      let offset = 0;
+      for (const set of sets) {
+        const count = set.distance.length;
+        state.stretches.push({
+          from: set.from,
+          to: set.to,
+          distance: set.distance,
+          lat: set.lat,
+          lon: set.lon,
+          height: result.heights.subarray(offset, offset + count),
+        });
+        offset += count;
+      }
+      render();
     }
-
-    // 3. Load it now if small, otherwise ask.
-    if (cost.blocksToFetch === 0 || (cost.bytesToFetch > 0 && cost.bytesToFetch <= AUTO_DETAIL_BYTES)) {
-      await loadDetail(run, controller);
-    } else {
-      const size = cost.bytesToFetch > 0 ? `about ${fmtMB(cost.bytesToFetch)}` : `${cost.blocksToFetch} blocks`;
-      state.pendingDetail = { run, controller };
-      el.loadDetail.textContent = `Load 2 m detail (${size})`;
-      el.loadDetail.hidden = false;
-      setStatus(`Showing the 10 m draft. The 2 m detail for this path is a larger download: ${size}.`);
-    }
+    setStatus(`Done. ${dataSummary()}.`);
   } catch (error) {
     if (isCancel(error) || !stillCurrent()) return;
     console.error(error);
-    setStatus(`Something went wrong while reading the terrain: ${error.message ?? error}`, true);
+    const what = state.draft ? 'The result so far is still shown.' : '';
+    setStatus(`Something went wrong while reading the terrain: ${error.message ?? error}. ${what}`, true);
   }
 }
 
-async function loadDetail(run, controller) {
-  const [a, b] = state.waypoints;
-  const stillCurrent = () => run === state.run;
-  el.loadDetail.hidden = true;
-  state.pendingDetail = null;
-  try {
-    setStatus('Loading 2 m detail…');
-    const detail = await buildProfile({
-      terrain,
-      a,
-      b,
-      layerId: '2m',
-      maxSamples: DETAIL_MAX_SAMPLES,
-      signal: controller.signal,
-      onProgress: (done, total) => {
-        if (stillCurrent()) setStatus(`Loading 2 m detail… ${done} of ${total} blocks`);
-      },
-    });
-    if (!stillCurrent()) return;
-    if (state.draft) fillGaps(detail, state.draft);
-    if (!heightRange(detail.heights)) {
-      setStatus('Showing 10 m data. There is no 2 m data on this path.');
-      return;
-    }
-    showProfile(detail, false);
-    setStatus(
-      `Done. ${detail.heights.length.toLocaleString('en')} samples from ${detail.blocks} blocks of 2 m data.`,
-    );
-  } catch (error) {
-    if (isCancel(error) || !stillCurrent()) return;
-    console.error(error);
-    setStatus(`Could not load the 2 m detail (${error.message ?? error}). The 10 m draft is still shown.`, true);
-  }
+// --- radio settings ----------------------------------------------------------------
+
+for (const [id, preset] of Object.entries(PRESETS)) {
+  const option = document.createElement('option');
+  option.value = id;
+  option.textContent = preset.label;
+  el.preset.append(option);
 }
+
+const roundTo = (n, digits) => String(Math.round(n * 10 ** digits) / 10 ** digits);
+
+/** Put the current settings into the boxes. */
+function showSettings() {
+  const s = state.settings;
+  el.preset.value = s.preset;
+  for (const [id, name] of Object.entries(FIELDS)) {
+    $(id).value = roundTo(s[name], name === 'freqMHz' ? 4 : 2);
+    $(id).classList.remove('invalid');
+  }
+  el.powerUnit.value = s.powerUnit;
+  $('power').value = s.powerUnit === 'W' ? roundTo(s.powerW, 4) : roundTo(wattsToDbm(s.powerW), 1);
+  $('power').classList.remove('invalid');
+  $('sf').value = String(s.sf);
+  $('bw').value = String(s.bw);
+  $('detail').value = s.detail;
+  $('sens').disabled = s.lora;
+  for (const node of document.querySelectorAll('.lora-only')) node.hidden = !s.lora;
+  el.sensNote.textContent = s.lora
+    ? 'Sensitivity is worked out from the spreading factor and bandwidth. Higher spreading factor or narrower bandwidth hears weaker signals, at the cost of slower messages.'
+    : 'Sensitivity is the weakest signal the receiver can use. −119 dBm is typical for an FM handheld.';
+}
+
+let settingsTimer = null;
+/** A setting changed: redo the sums shortly (so typing a number does not redo them per keystroke). */
+function settingsChanged() {
+  clearTimeout(settingsTimer);
+  settingsTimer = setTimeout(() => {
+    if (state.draft) update();
+    else writeAddress();
+  }, 250);
+}
+
+function readNumber(input, [low, high]) {
+  const value = Number(input.value);
+  const ok = input.value.trim() !== '' && Number.isFinite(value) && value >= low && value <= high;
+  input.classList.toggle('invalid', !ok);
+  return ok ? value : null;
+}
+
+for (const [id, name] of Object.entries(FIELDS)) {
+  $(id).addEventListener('input', () => {
+    const value = readNumber($(id), FIELD_LIMITS[name]);
+    if (value === null) return;
+    state.settings[name] = name === 'maxSamples' ? Math.round(value) : value;
+    settingsChanged();
+  });
+}
+
+$('power').addEventListener('input', () => {
+  const limits = state.settings.powerUnit === 'W' ? [0.000001, 100000] : [-30, 80];
+  const value = readNumber($('power'), limits);
+  if (value === null) return;
+  state.settings.powerW = state.settings.powerUnit === 'W' ? value : dbmToWatts(value);
+  settingsChanged();
+});
+
+el.powerUnit.addEventListener('change', () => {
+  state.settings.powerUnit = el.powerUnit.value;
+  showSettings(); // same power, shown in the other unit
+  writeAddress();
+});
+
+for (const id of ['sf', 'bw']) {
+  $(id).addEventListener('change', () => {
+    state.settings[id] = Number($(id).value);
+    state.settings = withSensitivity(state.settings);
+    showSettings();
+    settingsChanged();
+  });
+}
+
+$('detail').addEventListener('change', () => {
+  state.settings.detail = $('detail').value;
+  settingsChanged();
+});
+
+el.preset.addEventListener('change', () => {
+  state.settings = settingsForPreset(el.preset.value, state.settings);
+  showSettings();
+  settingsChanged();
+});
 
 // --- buttons ---------------------------------------------------------------------
 
 el.loadDetail.addEventListener('click', () => {
-  if (state.pendingDetail) loadDetail(state.pendingDetail.run, state.pendingDetail.controller);
-});
-
-el.fast.addEventListener('change', () => {
-  state.fast = el.fast.checked;
-  pathChanged();
+  if (!state.pending) return;
+  state.approved = true;
+  update();
 });
 
 el.clear.addEventListener('click', () => {
@@ -386,6 +659,12 @@ el.clear.addEventListener('click', () => {
 
 el.swap.addEventListener('click', () => {
   state.waypoints.reverse();
+  const s = state.settings;
+  // The antennas travel with their points.
+  [s.heightA, s.heightB] = [s.heightB, s.heightA];
+  [s.gainA, s.gainB] = [s.gainB, s.gainA];
+  [s.cableA, s.cableB] = [s.cableB, s.cableA];
+  showSettings();
   pathChanged();
 });
 
@@ -411,25 +690,21 @@ el.locate.addEventListener('click', () => {
 
 el.aboutOpen.addEventListener('click', () => el.about.showModal());
 
+let lastWrittenHash = '';
+const rememberHash = () => {
+  lastWrittenHash = location.hash;
+};
 window.addEventListener('hashchange', () => {
-  const fromAddress = readAddress();
-  const same =
-    fromAddress.waypoints.length === state.waypoints.length &&
-    fromAddress.waypoints.every(
-      (wp, i) =>
-        Math.abs(wp.lat - state.waypoints[i].lat) < 1e-5 && Math.abs(wp.lon - state.waypoints[i].lon) < 1e-5,
-    ) &&
-    fromAddress.fast === state.fast;
-  if (same) return;
-  start(fromAddress);
+  if (location.hash === lastWrittenHash) return; // our own update, not a pasted link
+  start(readAddress());
 });
 
 // --- start -----------------------------------------------------------------------
 
-function start({ waypoints, fast }) {
+function start({ waypoints, settings }) {
   state.waypoints = waypoints;
-  state.fast = fast;
-  el.fast.checked = fast;
+  state.settings = settings;
+  showSettings();
   if (waypoints.length === 2) {
     map.fitBounds(
       [
@@ -441,7 +716,7 @@ function start({ waypoints, fast }) {
   } else if (waypoints.length === 1) {
     map.setView([waypoints[0].lat, waypoints[0].lon], 11);
   }
-  pathChanged();
+  pathChanged().then(rememberHash);
 }
 
 start(readAddress());

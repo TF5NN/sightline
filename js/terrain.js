@@ -14,6 +14,9 @@ import { DEFAULT_BASE_URL, LAYERS, areaKey, tileCandidates } from './tiles.js';
 // Heights below this are treated as "no data" even if the file forgot to say so.
 const LOWEST_REAL_HEIGHT = -1000;
 
+/**
+ * @param {{ GeoTIFF?: any, baseUrl?: string, maxCachedBlocks?: number, concurrency?: number, fetchImpl?: typeof fetch }} options
+ */
 export function createTerrain({
   GeoTIFF,
   baseUrl = DEFAULT_BASE_URL,
@@ -244,6 +247,10 @@ export function createTerrain({
   /**
    * Heights for a list of grid positions. Positions with no data come back
    * as NaN (not-a-number), never as zero, so a hole can't pass for sea level.
+   *
+   * @param {string} layerId
+   * @param {{x: number, y: number}[]} gridPoints
+   * @param {{ onProgress?: (done: number, total: number) => void, signal?: AbortSignal }} [options]
    */
   async function sample(layerId, gridPoints, { onProgress, signal } = {}) {
     const { lookups, needed, problems, filesUsed } = await plan(layerId, gridPoints);

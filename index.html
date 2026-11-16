@@ -35,26 +35,107 @@
         <p id="hint" class="hint">Tap the map to place point A, then point B. Drag a point to move it.</p>
 
         <dl id="results" class="results" hidden>
+          <div id="verdict-box" class="verdict-box"><dt>Link verdict</dt><dd id="r-verdict">–</dd></div>
+          <div><dt>Margin</dt><dd id="r-margin">–</dd></div>
+          <div><dt>Received signal</dt><dd id="r-received">–</dd></div>
+          <div><dt>Free-space loss</dt><dd id="r-fsl">–</dd></div>
+          <div><dt>Terrain loss</dt><dd id="r-diffraction">–</dd></div>
+          <div><dt>Path</dt><dd id="r-path">–</dd></div>
           <div><dt>Distance</dt><dd id="r-distance">–</dd></div>
           <div><dt>Bearing A to B</dt><dd id="r-bearing">–</dd></div>
-          <div><dt>Ground at A</dt><dd id="r-a">–</dd></div>
-          <div><dt>Ground at B</dt><dd id="r-b">–</dd></div>
-          <div><dt>Highest point</dt><dd id="r-high">–</dd></div>
-          <div><dt>Terrain data</dt><dd id="r-data">–</dd></div>
         </dl>
 
         <div id="chart" class="chart" hidden></div>
         <p id="readout" class="readout" hidden></p>
+        <p id="legend" class="legend" hidden>
+          <span class="key key-los"></span>Line of sight
+          <span class="key key-fresnel"></span>Fresnel zone
+          <span class="key key-grazing"></span>Grazing
+          <span class="key key-blocked"></span>Blocked
+        </p>
 
         <div class="controls">
-          <label class="check">
-            <input id="fast" type="checkbox" />
-            Stay on 10 m data (faster, uses less mobile data)
-          </label>
           <button id="load-detail" type="button" class="primary" hidden>Load 2 m detail</button>
         </div>
 
         <p id="status" class="status" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="panel" aria-label="Radio settings">
+        <h2>Radio</h2>
+        <div class="fields">
+          <label class="wide">Setup
+            <select id="preset"></select>
+          </label>
+          <label>Frequency (MHz)
+            <input id="freq" type="number" step="any" min="1" inputmode="decimal" />
+          </label>
+          <label>Transmit power
+            <span class="pair">
+              <input id="power" type="number" step="any" inputmode="decimal" />
+              <select id="power-unit" aria-label="Power unit">
+                <option value="W">W</option>
+                <option value="dBm">dBm</option>
+              </select>
+            </span>
+          </label>
+          <label>Antenna height at A (m above ground)
+            <input id="height-a" type="number" step="any" min="0" inputmode="decimal" />
+          </label>
+          <label>Antenna height at B (m above ground)
+            <input id="height-b" type="number" step="any" min="0" inputmode="decimal" />
+          </label>
+          <label>Antenna gain at A (dBi)
+            <input id="gain-a" type="number" step="any" inputmode="decimal" />
+          </label>
+          <label>Antenna gain at B (dBi)
+            <input id="gain-b" type="number" step="any" inputmode="decimal" />
+          </label>
+          <label>Cable loss at A (dB)
+            <input id="cable-a" type="number" step="any" min="0" inputmode="decimal" />
+          </label>
+          <label>Cable loss at B (dB)
+            <input id="cable-b" type="number" step="any" min="0" inputmode="decimal" />
+          </label>
+          <label class="lora-only">Spreading factor
+            <select id="sf">
+              <option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option>
+            </select>
+          </label>
+          <label class="lora-only">Bandwidth (kHz)
+            <select id="bw">
+              <option>62.5</option><option>125</option><option>250</option><option>500</option>
+            </select>
+          </label>
+          <label>Receiver sensitivity (dBm)
+            <input id="sens" type="number" step="any" inputmode="decimal" />
+          </label>
+        </div>
+        <p id="sens-note" class="note"></p>
+
+        <details id="advanced">
+          <summary>Advanced</summary>
+          <div class="fields">
+            <label class="wide">Terrain detail
+              <select id="detail">
+                <option value="smart">Smart: 10 m, plus 2 m where it changes the answer</option>
+                <option value="full">2 m for the whole path (larger download)</option>
+                <option value="10m">10 m only (smallest download)</option>
+              </select>
+            </label>
+            <label>Most samples per path
+              <input id="max-samples" type="number" step="1000" min="2000" max="200000" inputmode="numeric" />
+            </label>
+            <label>Earth radius factor k
+              <input id="k" type="number" step="any" min="0.5" max="10" inputmode="decimal" />
+            </label>
+          </div>
+          <p class="note">
+            Smart detail reads 2 m data for the first and last 2 km and wherever the ground comes within one Fresnel
+            radius of the line of sight. k is 1.33 in normal weather: it is how much the air bends radio waves round
+            the Earth.
+          </p>
+        </details>
       </section>
     </main>
 
@@ -71,8 +152,9 @@
         points live only in this page and in its address, which you can copy to share a path.
       </p>
       <p>
-        This is an early version. It shows the ground only. Line of sight, the Fresnel zone and a link estimate come
-        next.
+        The verdict is an estimate from a simple, open model: free-space loss, plus knife-edge diffraction over at
+        most three terrain edges. It does not know about reflections, trees that have grown since the images were
+        taken, snow, or noise at the receiver. Read the margin as give or take 10 dB.
       </p>
       <h3>Good to know</h3>
       <ul>
@@ -85,7 +167,12 @@
           corrects it with the EGM96 sea-level model. Expect a metre or so of difference from local maps.
         </li>
         <li>
-          A dashed stretch of profile means the 2 m data had a hole there and the gap was filled from coarser data.
+          The profile is drawn with the Earth's curvature added, so the line of sight is straight. The readout under
+          the chart gives the real ground height.
+        </li>
+        <li>
+          By default the 2 m data is only read where it matters: near both antennas and wherever the ground comes
+          close to the Fresnel zone. Everything else comes from the 10 m data.
         </li>
       </ul>
       <h3>Credits</h3>

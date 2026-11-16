@@ -24,6 +24,7 @@ after(async () => {
   await server.close();
 });
 
+const near = (actual, expected, tolerance) => assert.ok(Math.abs(actual - expected) <= tolerance, `expected ${expected}, got ${actual}`);
 const newTerrain = (options = {}) => createTerrain({ GeoTIFF, baseUrl: server.url, ...options });
 
 test('2 m layer: heights match the true surface to a centimetre', async () => {
@@ -144,4 +145,48 @@ test('sample planning: long paths are capped, short paths still get two points',
   assert.equal(long.count, 20000);
   assert.ok(long.spacing > 5 && long.spacing < 5.01);
   assert.equal(planSamples(0.5, '10m', 20000).count, 2);
+});
+
+test('mixed profile: 2 m on chosen stretches, 10 m elsewhere, in order, holes filled', async () => {
+  const { composeTrack, sampleStretch, detailSpacing, FROM_10M, FROM_2M, FROM_FILL } = await import('../js/profile.js');
+  const terrain = newTerrain();
+  const { a, b } = meta.hole_path;
+  const draft = await buildProfile({ terrain, a, b, layerId: '10m' });
+  const total = draft.total;
+  // Detail on the first 300 m and on a stretch through the hole.
+  const wanted = [[0, 300], [500, 800]];
+  const spacing = detailSpacing(wanted, draft.heights.length, 20000);
+  assert.equal(spacing, 2);
+  const stretches = [];
+  for (const [from, to] of wanted) stretches.push(await sampleStretch({ terrain, a, b, total, from, to, spacing }));
+  const track = composeTrack(draft, stretches);
+
+  for (let i = 1; i < track.distance.length; i++) assert.ok(track.distance[i] > track.distance[i - 1], 'distances must rise');
+  assert.equal(track.distance[0], 0);
+  near(track.distance[track.distance.length - 1], total, 1e-6);
+  const count = (code) => track.source.filter((s) => s === code).length;
+  assert.ok(count(FROM_2M) > 200, `2 m samples: ${count(FROM_2M)}`);
+  assert.ok(count(FROM_10M) > 50, `10 m samples: ${count(FROM_10M)}`);
+  assert.ok(count(FROM_FILL) > 10, `filled samples: ${count(FROM_FILL)}`);
+  // Inside a detailed stretch every sample is 2 m (or a filled hole); outside, 10 m.
+  for (let i = 0; i < track.distance.length; i++) {
+    const d = track.distance[i];
+    const inDetail = wanted.some(([from, to]) => d >= from && d <= to);
+    if (inDetail) assert.ok(track.source[i] === FROM_2M || track.source[i] === FROM_FILL, `sample at ${d} m`);
+    else assert.equal(track.source[i], FROM_10M, `sample at ${d} m`);
+  }
+  // And every height is still the true surface.
+  let worst = 0;
+  for (let i = 0; i < track.distance.length; i++) {
+    const g = toGrid(track.lat[i], track.lon[i]);
+    worst = Math.max(worst, Math.abs(track.height[i] - truth(g.x, g.y)));
+  }
+  assert.ok(worst < 0.1, `worst error ${worst} m`);
+});
+
+test('mixed profile: sample spacing widens to respect the sample limit', async () => {
+  const { detailSpacing } = await import('../js/profile.js');
+  assert.equal(detailSpacing([[0, 2000], [38000, 40000]], 4000, 20000), 2);
+  const wide = detailSpacing([[0, 119000]], 4000, 20000);
+  assert.ok(wide > 7.4 && wide < 7.5, `spacing ${wide}`);
 });

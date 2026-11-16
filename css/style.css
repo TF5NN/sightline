@@ -18,6 +18,11 @@
   box-sizing: border-box;
 }
 
+/* "hidden" must win over any display rule below. */
+[hidden] {
+  display: none !important;
+}
+
 html,
 body {
   margin: 0;
@@ -237,6 +242,141 @@ dialog li {
   font-size: 0.925rem;
 }
 
+.panel h2 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px 12px;
+}
+
+.fields label {
+  display: grid;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.fields label.wide {
+  grid-column: 1 / -1;
+}
+
+.fields input,
+.fields select {
+  font: inherit;
+  font-family: var(--mono);
+  font-size: 0.95rem;
+  color: var(--ink);
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 10px;
+  min-height: 44px;
+  width: 100%;
+}
+
+.fields select {
+  font-family: var(--sans);
+}
+
+.fields input:disabled {
+  background: var(--paper);
+  color: var(--muted);
+}
+
+.fields input.invalid {
+  border-color: var(--amber);
+}
+
+.pair {
+  display: grid;
+  grid-template-columns: 1fr 86px;
+  gap: 6px;
+}
+
+.note {
+  margin: 8px 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+details#advanced {
+  margin-top: 12px;
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+
+details#advanced summary {
+  cursor: pointer;
+  font-weight: 600;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+}
+
+details#advanced .fields {
+  margin-top: 8px;
+}
+
+.verdict-box dd {
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 1.15rem;
+}
+
+.verdict-box.solid,
+.verdict-box.good {
+  background: #d5ecd9;
+}
+
+.verdict-box.marginal {
+  background: #fbeedd;
+}
+
+.verdict-box.unlikely {
+  background: #f8dcd8;
+}
+
+.legend {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+}
+
+.key {
+  display: inline-block;
+  width: 18px;
+  height: 4px;
+  border-radius: 2px;
+  margin-left: 10px;
+}
+
+.key-los {
+  background: #2f6fb7;
+  margin-left: 0;
+}
+
+.key-fresnel {
+  height: 10px;
+  background: rgb(47 111 183 / 0.2);
+  border: 1px solid rgb(47 111 183 / 0.5);
+}
+
+.key-grazing {
+  background: #d98a00;
+}
+
+.key-blocked {
+  background: #c0392b;
+}
+
 /* The A and B pins on the map. */
 .pin {
   display: grid;
@@ -299,7 +439,7 @@ dialog li {
   }
 
   .chart {
-    height: 240px;
+    height: 260px;
   }
 
   .brand p {
