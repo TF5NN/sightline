@@ -355,12 +355,27 @@ function render() {
   $('r-fsl').textContent = fmtDb(link.freeSpaceLoss);
   const edges = link.diffraction.edges.length;
   $('r-diffraction').textContent =
-    edges === 0 ? 'none' : `${fmtDb(link.diffraction.total)}, ${edges} edge${edges > 1 ? 's' : ''}`;
+    link.terrainLoss === 0
+      ? 'none'
+      : link.terrainMethod === 'edges'
+        ? `${fmtDb(link.terrainLoss)}, ${edges} edge${edges > 1 ? 's' : ''}`
+        : fmtDb(link.terrainLoss);
   $('r-path').textContent = ['Clear', 'Grazing', 'Blocked'][link.path.overall];
   drawProblemsOnMap(track, link.path.status);
 }
 
 function tightestSpotText(track, link) {
+  return `${worstSpotText(track, link)}${terrainLossText(link)}`;
+}
+
+/** One sentence on how the terrain loss was arrived at, when it needs explaining. */
+function terrainLossText(link) {
+  if (link.terrainMethod !== 'allowance') return '';
+  const b = link.bullington;
+  return ` Terrain loss: ${fmtDb(b.knifeEdge)} over the ridge plus ${fmtDb(b.allowance)} allowance for broad, real terrain.`;
+}
+
+function worstSpotText(track, link) {
   const i = link.path.worstIndex;
   if (i < 0) return '';
   const where = fmtDistance(track.distance[i]);
@@ -581,7 +596,7 @@ function showSettings() {
   for (const node of document.querySelectorAll('.lora-only')) node.hidden = !s.lora;
   el.sensNote.textContent = s.lora
     ? 'Sensitivity is worked out from the spreading factor and bandwidth. Higher spreading factor or narrower bandwidth hears weaker signals, at the cost of slower messages.'
-    : 'Sensitivity is the weakest signal the receiver can use. −119 dBm is typical for an FM handheld.';
+    : 'Sensitivity is the weakest signal the receiver can use: −119 dBm is typical for FM, and that is "just readable", not comfortable. A stock rubber duck is about −3 dBi; set the real gain and height for a repeater or a yagi.';
 }
 
 let settingsTimer = null;

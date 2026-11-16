@@ -6,7 +6,8 @@ import { loraSensitivity } from './radio.js';
 
 // Ready-made setups. LoRa figures are the networks' own defaults, checked
 // against MeshCore and Meshtastic documentation in November 2026. Antenna
-// gains and heights are typical starting points, meant to be changed.
+// gains and heights are typical starting points, meant to be changed. A stock
+// rubber-duck antenna is put at -3 dBi; many are worse.
 export const PRESETS = {
   meshcore: {
     label: 'MeshCore (EU/UK narrow, 869.618 MHz)',
@@ -21,16 +22,16 @@ export const PRESETS = {
     gainA: 2, gainB: 2, cableA: 0, cableB: 0, heightA: 2, heightB: 2,
   },
   fm2m: {
-    label: '2 m FM handheld (145.5 MHz, 5 W)',
+    label: '2 m FM handheld (145.5 MHz, 5 W, rubber duck)',
     lora: false,
     freqMHz: 145.5, powerW: 5, sensitivity: -119,
-    gainA: 0, gainB: 0, cableA: 0, cableB: 0, heightA: 1.5, heightB: 1.5,
+    gainA: -3, gainB: -3, cableA: 0, cableB: 0, heightA: 1.5, heightB: 1.5,
   },
   fm70cm: {
-    label: '70 cm FM handheld (433.5 MHz, 5 W)',
+    label: '70 cm FM handheld (433.5 MHz, 5 W, rubber duck)',
     lora: false,
     freqMHz: 433.5, powerW: 5, sensitivity: -119,
-    gainA: 0, gainB: 0, cableA: 0, cableB: 0, heightA: 1.5, heightB: 1.5,
+    gainA: -3, gainB: -3, cableA: 0, cableB: 0, heightA: 1.5, heightB: 1.5,
   },
   custom: { label: 'Custom (type your own figures)', lora: false },
 };

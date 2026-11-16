@@ -218,3 +218,79 @@ test('detail stretches: a short path is covered end to end', () => {
   });
   assert.deepEqual(detailStretches({ distances, path: link.path, diffraction: link.diffraction }), [[0, 3000]]);
 });
+
+test('Bullington: clear path costs nothing', async () => {
+  const { bullingtonLoss } = await import('../js/radio.js');
+  const { distances, ground } = flatPath(5000, 10);
+  const path = analysePath({ distances, ground, heightA: 40, heightB: 40, freqMHz: 868 });
+  assert.equal(bullingtonLoss({ distances, terrain: path.terrain, tipA: path.tipA, tipB: path.tipB, freqMHz: 868 }).total, 0);
+});
+
+test('Bullington: one sharp ridge is its knife-edge loss plus the ITU allowance', async () => {
+  const { bullingtonLoss } = await import('../js/radio.js');
+  const { distances, ground } = flatPath(20000, 10);
+  ground[500] = 60; // 30 m above the line, 5 km from A
+  const path = analysePath({ distances, ground, heightA: 30, heightB: 30, freqMHz: 868, k: 1e9 });
+  const b = bullingtonLoss({ distances, terrain: path.terrain, tipA: path.tipA, tipB: path.tipB, freqMHz: 868 });
+  near(b.distance, 5000, 1);
+  near(b.knifeEdge, knifeEdgeLoss(1.179), 0.05);
+  near(b.allowance, (1 - Math.exp(-b.knifeEdge / 6)) * (10 + 0.02 * 20), 1e-9);
+  near(b.total, 15.0 + 9.55, 0.3);
+});
+
+test('real-world check: 143 km at 145.5 MHz over a mountain 635 m above the line', async () => {
+  // Gunnar's first field report (16 Nov 2026): a 5 W handheld with a rubber duck opens the
+  // repeater but is not readable; a yagi on the same radio gets through. The bare knife edge
+  // (24 dB) called this link "good". With the ITU allowance the terrain costs about 37 dB.
+  const { distances, ground } = flatPath(142550, 50);
+  const peak = Math.round(106120 / 50);
+  ground[0] = 650;
+  ground[distances.length - 1] = 190;
+  const radio = { freqMHz: 145.5, powerW: 5, gainA: 0, gainB: 0, cableA: 0, cableB: 0, heightA: 0, heightB: 0, sensitivity: -119, k: 1e9 };
+  const lineAtPeak = 650 + ((190 - 650) * distances[peak]) / 142550;
+  ground[peak] = lineAtPeak + 635;
+  const link = linkEstimate({ distances, ground, radio });
+  near(link.diffraction.total, 24.4, 0.2, 'bare knife edge');
+  near(link.bullington.total, 37.0, 0.3, 'with the ITU allowance');
+  assert.equal(link.terrainMethod, 'allowance');
+  near(link.terrainLoss, link.bullington.total, 1e-9);
+  near(link.freeSpaceLoss, 118.8, 0.1);
+});
+
+test('separate ridges: charging edge by edge still wins when it is the larger', () => {
+  const { distances, ground } = flatPath(30000, 10);
+  ground[500] = 50;
+  ground[1500] = 90;
+  ground[2500] = 55;
+  const link = linkEstimate({
+    distances, ground,
+    radio: { freqMHz: 433, powerW: 1, gainA: 0, gainB: 0, cableA: 0, cableB: 0, heightA: 10, heightB: 10, sensitivity: -119, k: 1e9 },
+  });
+  assert.ok(link.terrainLoss >= link.diffraction.total && link.terrainLoss >= link.bullington.total);
+  near(link.terrainLoss, Math.max(link.diffraction.total, link.bullington.total), 1e-9);
+});
+
+test('smart detail leaves wide Fresnel zones alone: a long VHF path only gets its two ends', () => {
+  const { distances, ground } = flatPath(140000, 50, 0);
+  ground[0] = 650;
+  ground[distances.length - 1] = 190;
+  // Ground that hugs the line of sight for 30 km in the middle (a near miss the whole way).
+  for (let i = 1; i < distances.length - 1; i++) {
+    const d = distances[i];
+    const line = 650 + ((190 - 650) * d) / 140000;
+    if (d > 60000 && d < 90000) ground[i] = line - 100;
+  }
+  const radio = { freqMHz: 145.5, powerW: 5, gainA: 0, gainB: 0, cableA: 0, cableB: 0, heightA: 2, heightB: 2, sensitivity: -119, k: 1e9 };
+  const link = linkEstimate({ distances, ground, radio });
+  assert.ok(link.path.fresnel[Math.round(75000 / 50)] > 200, 'the zone is hundreds of metres wide mid-path');
+  const stretches = detailStretches({ distances, path: link.path, diffraction: link.diffraction });
+  assert.deepEqual(stretches, [[0, 2000], [138000, 140000]]);
+  // The same near miss on 868 MHz over a short path does get 2 m data.
+  const short = flatPath(20000, 10, 0);
+  short.ground[0] = 100;
+  short.ground[short.distances.length - 1] = 100;
+  for (let i = 1; i < short.distances.length - 1; i++) if (short.distances[i] > 9000 && short.distances[i] < 11000) short.ground[i] = 80;
+  const lora = linkEstimate({ ...short, radio: { ...radio, freqMHz: 868 } });
+  const loraStretches = detailStretches({ distances: short.distances, path: lora.path, diffraction: lora.diffraction });
+  assert.ok(loraStretches.some(([a, b]) => a < 10000 && b > 10000), JSON.stringify(loraStretches));
+});

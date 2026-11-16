@@ -35,8 +35,12 @@ ellipsoid, so the app corrects it with a coarse EGM96 table (`js/geoid-data.js`)
   sight is straight.
 - Clear / grazing / blocked: grazing means the ground is inside 60% of the
   first Fresnel zone; blocked means it is above the line of sight.
-- Terrain loss: knife-edge diffraction (ITU-R P.526 approximation) on the worst
-  obstacle, then on the worst one on each side of it. Three edges at most.
+- Terrain loss is worked out two ways and the larger is used: knife-edge
+  diffraction (ITU-R P.526 approximation) on the worst obstacle and the worst
+  one on each side of it; and the Bullington single-ridge method with the
+  ITU allowance for broad, real terrain, `(1 - exp(-L/6)) * (10 + 0.02 d_km)`.
+  The allowance was added after the first real-world check (a 143 km, 145 MHz
+  path over a mountain, which the bare knife edge rated 13 dB too kindly).
 - Margin = transmit power + gains - cable losses - free-space loss - terrain
   loss - receiver sensitivity. Verdict bands: 20 dB solid, 10 dB good, 0 dB
   marginal, below that unlikely. These bands are a starting proposal.

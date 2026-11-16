@@ -17,6 +17,13 @@ export const STANDARD_K = 4 / 3;
 /** Terrain closer to the line of sight than this share of the Fresnel radius starts to cost signal. */
 export const CLEARANCE_RULE = 0.6;
 
+/**
+ * 2 m data is only worth fetching where the Fresnel zone is narrower than this
+ * many metres. Finer data sharpens heights by a few metres at most, which only
+ * matters when the zone itself is small.
+ */
+export const DETAIL_FRESNEL_LIMIT = 75;
+
 export const STATUS_CLEAR = 0;
 export const STATUS_GRAZING = 1; // terrain inside 60% of the Fresnel zone
 export const STATUS_BLOCKED = 2; // terrain above the line of sight
@@ -185,6 +192,67 @@ export function diffractionLoss({ distances, terrain, tipA, tipB, freqMHz, guard
   return { total: edges.reduce((sum, e) => sum + e.loss, 0), edges };
 }
 
+/**
+ * Terrain loss by the Bullington method of ITU-R P.526: the whole profile is
+ * replaced by one equivalent ridge, standing where the horizon rays from the
+ * two antennas cross. The recommendation then adds an allowance, because real
+ * hills are broad and rough and cost more than a perfect knife edge would:
+ *
+ *     loss = knifeEdge + (1 - exp(-knifeEdge / 6)) * (10 + 0.02 * distance in km)
+ *
+ * `terrain` must already include the Earth's bulge (as analysePath returns it).
+ *
+ * @param {{ distances: ArrayLike<number>, terrain: ArrayLike<number>, tipA: number, tipB: number, freqMHz: number }} options
+ */
+export function bullingtonLoss({ distances, terrain, tipA, tipB, freqMHz }) {
+  const last = distances.length - 1;
+  const total = distances[last];
+  const none = { knifeEdge: 0, allowance: 0, total: 0, distance: null };
+  if (!(total > 0) || last < 2) return none;
+
+  // Steepest ray from A that still touches the ground somewhere.
+  let slopeA = -Infinity;
+  for (let i = 1; i < last; i++) {
+    if (Number.isNaN(terrain[i])) continue;
+    slopeA = Math.max(slopeA, (terrain[i] - tipA) / distances[i]);
+  }
+  if (slopeA === -Infinity) return none;
+  const slopeDirect = (tipB - tipA) / total;
+
+  let v;
+  let where;
+  if (slopeA < slopeDirect) {
+    // B is visible from A: take the point that intrudes most into the path.
+    v = -Infinity;
+    for (let i = 1; i < last; i++) {
+      if (Number.isNaN(terrain[i])) continue;
+      const d1 = distances[i];
+      const line = tipA + slopeDirect * d1;
+      const vi = diffractionParameter(freqMHz, terrain[i] - line, d1, total - d1);
+      if (vi > v) {
+        v = vi;
+        where = d1;
+      }
+    }
+  } else {
+    // B is hidden: find the ray from B the same way, and the point where the two rays cross.
+    let slopeB = -Infinity;
+    for (let i = 1; i < last; i++) {
+      if (Number.isNaN(terrain[i])) continue;
+      slopeB = Math.max(slopeB, (terrain[i] - tipB) / (total - distances[i]));
+    }
+    where = (tipB - tipA + slopeB * total) / (slopeA + slopeB);
+    const height = tipA + slopeA * where;
+    const line = tipA + slopeDirect * where;
+    v = diffractionParameter(freqMHz, height - line, where, total - where);
+  }
+
+  const knifeEdge = knifeEdgeLoss(v);
+  if (knifeEdge <= 0) return none;
+  const allowance = (1 - Math.exp(-knifeEdge / 6)) * (10 + 0.02 * (total / 1000));
+  return { knifeEdge, allowance, total: knifeEdge + allowance, distance: where };
+}
+
 export const VERDICTS = [
   { min: 20, word: 'Solid', key: 'solid' },
   { min: 10, word: 'Good', key: 'good' },
@@ -221,11 +289,34 @@ export function linkEstimate({ distances, ground, radio }) {
     tipB: path.tipB,
     freqMHz: radio.freqMHz,
   });
+  const bullington = bullingtonLoss({
+    distances,
+    terrain: path.terrain,
+    tipA: path.tipA,
+    tipB: path.tipB,
+    freqMHz: radio.freqMHz,
+  });
+  // Two ways of charging for terrain. Separate ridges are charged best one by
+  // one (the edges above); one broad mountain is charged best by the single
+  // equivalent ridge plus the ITU allowance. Neither should be undercut, so
+  // the larger of the two is used.
+  const terrainLoss = Math.max(diffraction.total, bullington.total);
   const fsl = freeSpaceLoss(radio.freqMHz, path.total);
   const txDbm = wattsToDbm(radio.powerW);
-  const received = txDbm + radio.gainA + radio.gainB - radio.cableA - radio.cableB - fsl - diffraction.total;
+  const received = txDbm + radio.gainA + radio.gainB - radio.cableA - radio.cableB - fsl - terrainLoss;
   const margin = received - radio.sensitivity;
-  return { path, diffraction, freeSpaceLoss: fsl, txDbm, received, margin, verdict: verdictFor(margin) };
+  return {
+    path,
+    diffraction,
+    bullington,
+    terrainLoss,
+    terrainMethod: terrainLoss === 0 ? 'none' : bullington.total > diffraction.total ? 'allowance' : 'edges',
+    freeSpaceLoss: fsl,
+    txDbm,
+    received,
+    margin,
+    verdict: verdictFor(margin),
+  };
 }
 
 /**
@@ -237,9 +328,11 @@ export function linkEstimate({ distances, ground, radio }) {
  *     above or below it (a near miss either way),
  *   - around each diffraction edge.
  * Stretches buried deep under the line of sight are left alone: finer data
- * there would not change the answer.
+ * there would not change the answer. So are stretches where the Fresnel zone
+ * is wide (long paths on low frequencies): a few metres of extra precision
+ * means nothing against a zone hundreds of metres across.
  */
-export function detailStretches({ distances, path, diffraction, endLength = 2000, pad = 200 }) {
+export function detailStretches({ distances, path, diffraction, endLength = 2000, pad = 200, fresnelLimit = DETAIL_FRESNEL_LIMIT }) {
   const total = path.total;
   const raw = [];
   const ends = Math.min(endLength, total / 2);
@@ -247,7 +340,8 @@ export function detailStretches({ distances, path, diffraction, endLength = 2000
 
   let start = null;
   for (let i = 0; i < distances.length; i++) {
-    const near = path.fresnel[i] > 0 && Math.abs(path.clearance[i]) < path.fresnel[i];
+    const r = path.fresnel[i];
+    const near = r > 0 && r <= fresnelLimit && Math.abs(path.clearance[i]) < r;
     if (near && start === null) start = distances[i];
     if (!near && start !== null) {
       raw.push([start - pad, distances[i - 1] + pad]);
@@ -256,7 +350,9 @@ export function detailStretches({ distances, path, diffraction, endLength = 2000
   }
   if (start !== null) raw.push([start - pad, total]);
 
-  for (const edge of diffraction.edges) raw.push([edge.distance - 1.5 * pad, edge.distance + 1.5 * pad]);
+  for (const edge of diffraction.edges) {
+    if (path.fresnel[edge.index] <= fresnelLimit) raw.push([edge.distance - 1.5 * pad, edge.distance + 1.5 * pad]);
+  }
 
   return mergeStretches(raw.map(([a, b]) => [Math.max(0, a), Math.min(total, b)]));
 }
