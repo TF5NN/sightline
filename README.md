@@ -17,6 +17,11 @@ and a rubber duck) and get free-space loss, terrain loss, received signal,
 margin and a verdict. Both ends use the same station unless you tick
 "Different station at each end". The Fresnel zone is a switch, off by default.
 
+On a phone, slide a finger along the profile to read the heights; the reading
+stays when you lift it. The banner, colours and fonts are shared with
+[Northbound](https://github.com/TF5NN/sat-track) and
+[Feedpoint](https://github.com/TF5NN/HF-Antenna-Impedance-Visualizer).
+
 ## How it works
 
 1. You place point A and point B.

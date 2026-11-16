@@ -3,17 +3,28 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#214e3a" />
     <title>Sightline: data connection test</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="css/style.css" />
   </head>
   <body>
-    <header class="top">
-      <div class="brand">
-        <h1>Sightline: data connection test</h1>
-        <p>Checks that this browser can read the ArcticDEM terrain files directly</p>
+    <div class="app-shell">
+    <header class="header">
+      <a href="./" class="brand" aria-label="Sightline home">
+        <span class="brand-icon">
+          <svg viewBox="0 0 36 36" aria-hidden="true" focusable="false">
+            <path class="fill" d="M4 28 13 14.5 17.5 21.25 24.25 10 32 28Z" />
+            <path d="M6 9 30 6.75" />
+          </svg>
+        </span>
+        <h1>SIGHTLINE<small>DATA CONNECTION TEST</small></h1>
+      </a>
+      <div class="header-right">
+        <a class="callsign" href="./">Back to the app</a>
+        <a class="callsign home" href="https://tf5nn.github.io/" target="_blank" rel="noopener" title="More projects from TF5NN">TF5NN ↗</a>
+        <a class="callsign github" href="https://github.com/TF5NN/sightline" target="_blank" rel="noopener" title="Source code on GitHub">GitHub ↗</a>
       </div>
-      <a href="./">Back to the app</a>
     </header>
     <div class="report">
       <p>
@@ -31,5 +42,6 @@
     </div>
     <script src="vendor/geotiff.js"></script>
     <script type="module" src="js/step0.js"></script>
+    </div>
   </body>
 </html>

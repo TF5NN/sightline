@@ -1,11 +1,19 @@
 // Draws the profile chart: terrain, line of sight, Fresnel zone and the
 // problem spots. Knows about Plotly and nothing else.
+//
+// Reading the profile is done here rather than by Plotly, so that it works the
+// same with a mouse and with a finger: move along the chart and a line follows,
+// and the page is told which sample is under it. On a touch screen the line
+// stays where the finger left it.
 
 const INK = '#203b3d';
 const LINE = '#dfe5de';
 const GREEN = '#267c62';
 const BLUE = '#2f6fb7';
 const RED = '#c0392b';
+
+/** Narrow charts (phones) get tighter margins and no title on the height axis. */
+export const isCompact = (element) => element.clientWidth > 0 && element.clientWidth < 520;
 
 const gapsToNull = (values) => Array.from(values, (v) => (Number.isFinite(v) ? v : null));
 
@@ -64,8 +72,7 @@ export function drawProfile(Plotly, element, view, { onHover, onLeave } = {}) {
       fill: 'tonexty',
       fillcolor: 'rgba(38,124,98,0.16)',
       connectgaps: false,
-      hovertemplate: '%{x:.2f} km<extra></extra>',
-      showlegend: false,
+      ...quiet,
     },
   ];
 
@@ -128,60 +135,130 @@ export function drawProfile(Plotly, element, view, { onHover, onLeave } = {}) {
     }
   }
 
+  const compact = isCompact(element);
   const layout = {
-    margin: { l: 54, r: 12, t: 18, b: 42 },
+    margin: compact ? { l: 38, r: 6, t: 16, b: 36 } : { l: 54, r: 12, t: 18, b: 42 },
     paper_bgcolor: 'rgba(0,0,0,0)',
     plot_bgcolor: 'rgba(0,0,0,0)',
-    font: { family: "'DM Sans', Arial, sans-serif", size: 12, color: INK },
-    hovermode: 'x',
+    font: { family: "'DM Sans', Arial, sans-serif", size: compact ? 11 : 12, color: INK },
+    hovermode: false,
     dragmode: false,
     xaxis: {
-      title: { text: 'Distance from A (km)' },
+      title: { text: 'Distance from A (km)', standoff: compact ? 6 : 10 },
       range: [0, view.km[n - 1]],
       gridcolor: LINE,
       zeroline: false,
       fixedrange: true,
+      nticks: compact ? 6 : 12,
     },
     yaxis: {
-      title: { text: hasLink ? 'Height (m), Earth curve included' : 'Height above sea level (m)' },
+      title: compact ? undefined : { text: 'Height (m)' },
       range: [floor, ceiling + pad],
       gridcolor: LINE,
       zeroline: false,
       fixedrange: true,
+      nticks: compact ? 6 : 8,
     },
   };
 
   const config = { displayModeBar: false, responsive: true, scrollZoom: false, doubleClick: false };
 
-  // Take the old listeners off BEFORE redrawing. If the pointer is resting on
-  // the chart, Plotly sends a fresh "hover" in the middle of the redraw, and an
-  // old listener would receive positions that belong to the new profile.
-  element.removeAllListeners?.('plotly_hover');
-  element.removeAllListeners?.('plotly_unhover');
-
   Plotly.react(element, traces, layout, config);
 
-  // A slip in a hover handler must never be able to break the chart or a download,
-  // so each one is fenced off.
+  // What the reading line needs to know about this drawing.
+  const before = element._sightline;
+  element._sightline = { km: view.km, terrain, n, onHover, onLeave, atKm: null };
+  attachReading(element);
+  // If the line was showing (pointer resting on the chart, or left there by a
+  // finger), put it back at the same distance on the new drawing.
+  if (before && before.atKm !== null) showAt(element, Math.min(before.atKm, view.km[n - 1]));
+  else hideCursor(element);
+}
+
+/** Index of the sample nearest to a distance. The samples are in order but not evenly spaced. */
+function nearestIndex(km, target) {
+  let low = 0;
+  let high = km.length - 1;
+  while (high - low > 1) {
+    const middle = (low + high) >> 1;
+    if (km[middle] < target) low = middle;
+    else high = middle;
+  }
+  return target - km[low] <= km[high] - target ? low : high;
+}
+
+function cursorOf(element) {
+  let cursor = element.querySelector(':scope > .chart-cursor');
+  if (!cursor) {
+    cursor = document.createElement('div');
+    cursor.className = 'chart-cursor';
+    cursor.hidden = true;
+    cursor.append(document.createElement('i'));
+    element.append(cursor);
+  }
+  return cursor;
+}
+
+function hideCursor(element) {
+  cursorOf(element).hidden = true;
+}
+
+/** Put the reading line at a distance along the path and tell the page which sample that is. */
+function showAt(element, targetKm) {
+  const state = element._sightline;
+  const size = element._fullLayout?._size;
+  if (!state || !size) return;
+  const total = state.km[state.n - 1];
+  const index = nearestIndex(state.km, targetKm);
+  state.atKm = state.km[index];
+
+  const cursor = cursorOf(element);
+  cursor.style.left = `${size.l + (state.km[index] / total) * size.w}px`;
+  cursor.style.top = `${size.t}px`;
+  cursor.style.height = `${size.h}px`;
+  const dot = cursor.firstElementChild;
+  const y = state.terrain[index] === null ? NaN : element._fullLayout.yaxis?.l2p?.(state.terrain[index]);
+  dot.hidden = !Number.isFinite(y);
+  if (Number.isFinite(y)) dot.style.top = `${y}px`;
+  cursor.hidden = false;
+  state.onHover?.(index);
+}
+
+/** Listen for the pointer or a finger on the chart. Done once per chart element. */
+function attachReading(element) {
+  if (element._sightlineReading) return;
+  element._sightlineReading = true;
+  // A slip in here must never be able to break the chart or a download, so each handler is fenced off.
   const safely = (handler) => (event) => {
     try {
       handler(event);
     } catch (error) {
-      console.warn('Chart hover handler failed', error);
+      console.warn('Chart reading failed', error);
     }
   };
-  if (onHover) {
-    element.on(
-      'plotly_hover',
-      safely((event) => {
-        const point = event.points.find((p) => p.curveNumber === 1) ?? event.points[0];
-        if (point && Number.isInteger(point.pointIndex) && point.pointIndex < n) onHover(point.pointIndex);
-      }),
-    );
-  }
-  if (onLeave) element.on('plotly_unhover', safely(onLeave));
+  const follow = safely((event) => {
+    const state = element._sightline;
+    const size = element._fullLayout?._size;
+    if (!state || !size) return;
+    const x = event.clientX - element.getBoundingClientRect().left - size.l;
+    const fraction = Math.min(1, Math.max(0, x / size.w));
+    showAt(element, fraction * state.km[state.n - 1]);
+  });
+  const leave = safely((event) => {
+    // A finger lifting off leaves the reading in place; a mouse leaving clears it.
+    if (event.pointerType !== 'mouse') return;
+    const state = element._sightline;
+    if (state) state.atKm = null;
+    hideCursor(element);
+    state?.onLeave?.();
+  });
+  element.addEventListener('pointerdown', follow);
+  element.addEventListener('pointermove', follow);
+  element.addEventListener('pointerleave', leave);
 }
 
 export function clearProfile(Plotly, element) {
+  element._sightline = null;
+  hideCursor(element);
   Plotly.purge(element);
 }

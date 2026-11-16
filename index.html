@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#214e3a" />
     <title>Sightline: terrain profiles for radio links</title>
     <meta
       name="description"
@@ -13,12 +14,22 @@
     <link rel="stylesheet" href="css/style.css" />
   </head>
   <body>
-    <header class="top">
-      <div class="brand">
-        <h1>Sightline</h1>
-        <p>Line of sight between two points, on 2 m elevation data</p>
+    <div class="app-shell">
+    <header class="header">
+      <a href="./" class="brand" aria-label="Sightline home">
+        <span class="brand-icon">
+          <svg viewBox="0 0 36 36" aria-hidden="true" focusable="false">
+            <path class="fill" d="M4 28 13 14.5 17.5 21.25 24.25 10 32 28Z" />
+            <path d="M6 9 30 6.75" />
+          </svg>
+        </span>
+        <h1>SIGHTLINE<small>TERRAIN PROFILES FOR RADIO LINKS</small></h1>
+      </a>
+      <div class="header-right">
+        <button id="about-open" class="callsign" type="button">About</button>
+        <a class="callsign home" href="https://tf5nn.github.io/" target="_blank" rel="noopener" title="More projects from TF5NN">TF5NN ↗</a>
+        <a class="callsign github" href="https://github.com/TF5NN/sightline" target="_blank" rel="noopener" title="Source code on GitHub">GitHub ↗</a>
       </div>
-      <button id="about-open" class="ghost" type="button">About</button>
     </header>
 
     <main>
@@ -40,13 +51,14 @@
           <span class="key key-los"></span>Line of sight
           <span class="key key-blocked"></span>Blocked
           <span id="legend-fresnel" hidden><span class="key key-fresnel"></span>Fresnel zone</span>
+          <span class="legend-note">Heights in metres, Earth's curve included</span>
         </p>
 
         <div id="bare-controls" class="bare-controls" hidden>
-          <label>Antenna height at A (m)
+          <label>Antenna height A <span class="u">(m)</span>
             <input id="height-a" type="number" step="any" min="0" inputmode="decimal" />
           </label>
-          <label>Antenna height at B (m)
+          <label>Antenna height B <span class="u">(m)</span>
             <input id="height-b" type="number" step="any" min="0" inputmode="decimal" />
           </label>
           <button id="link-toggle" type="button" class="primary" aria-expanded="false" aria-controls="link-panel">
@@ -106,7 +118,7 @@
             puts the list's figure back.
           </p>
           <div class="fields">
-            <label>Frequency (MHz)
+            <label>Frequency <span class="u">(MHz)</span>
               <input id="freq" type="number" step="any" min="1" inputmode="decimal" />
             </label>
             <label>Power unit
@@ -116,21 +128,21 @@
               </select>
             </label>
             <label><span class="a-word">Transmit power</span>
-              <input id="power-a" type="number" step="any" inputmode="decimal" />
+              <input id="power-a" type="number" step="any" />
             </label>
             <label class="split-only">Transmit power at B
-              <input id="power-b" type="number" step="any" inputmode="decimal" />
+              <input id="power-b" type="number" step="any" />
             </label>
-            <label><span class="a-word">Antenna gain</span> (dBi)
-              <input id="gain-a" type="number" step="any" inputmode="decimal" />
+            <label><span class="a-word">Antenna gain</span> <span class="u">(dBi)</span>
+              <input id="gain-a" type="number" step="any" />
             </label>
-            <label class="split-only">Antenna gain at B (dBi)
-              <input id="gain-b" type="number" step="any" inputmode="decimal" />
+            <label class="split-only">Antenna gain at B <span class="u">(dBi)</span>
+              <input id="gain-b" type="number" step="any" />
             </label>
-            <label><span class="a-word">Cable loss</span> (dB)
+            <label><span class="a-word">Cable loss</span> <span class="u">(dB)</span>
               <input id="cable-a" type="number" step="any" min="0" inputmode="decimal" />
             </label>
-            <label class="split-only">Cable loss at B (dB)
+            <label class="split-only">Cable loss at B <span class="u">(dB)</span>
               <input id="cable-b" type="number" step="any" min="0" inputmode="decimal" />
             </label>
             <label class="lora-only">Spreading factor
@@ -138,16 +150,16 @@
                 <option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option>
               </select>
             </label>
-            <label class="lora-only">Bandwidth (kHz)
+            <label class="lora-only">Bandwidth <span class="u">(kHz)</span>
               <select id="bw">
                 <option>62.5</option><option>125</option><option>250</option><option>500</option>
               </select>
             </label>
-            <label><span class="a-word">Receiver sensitivity</span> (dBm)
-              <input id="sens-a" type="number" step="any" inputmode="decimal" />
+            <label><span class="a-word">Receiver sensitivity</span> <span class="u">(dBm)</span>
+              <input id="sens-a" type="number" step="any" />
             </label>
-            <label class="split-only">Receiver sensitivity at B (dBm)
-              <input id="sens-b" type="number" step="any" inputmode="decimal" />
+            <label class="split-only">Receiver sensitivity at B <span class="u">(dBm)</span>
+              <input id="sens-b" type="number" step="any" />
             </label>
             <label class="wide">Terrain detail
               <select id="detail">
@@ -159,7 +171,7 @@
             <label>Most samples per path
               <input id="max-samples" type="number" step="1000" min="2000" max="200000" inputmode="numeric" />
             </label>
-            <label>Earth radius factor k
+            <label>Earth radius factor <span class="u">k</span>
               <input id="k" type="number" step="any" min="0.5" max="10" inputmode="decimal" />
             </label>
           </div>
@@ -174,8 +186,11 @@
 
     <footer class="foot">
       Terrain: ArcticDEM, Polar Geospatial Center. Map: © OpenStreetMap contributors.
-      <a href="step0.html">Data connection test</a>
+      <a href="step0.html">Data connection test</a> ·
+      <a href="https://github.com/TF5NN/sightline" target="_blank" rel="noopener">Source code</a> ·
+      <a href="https://tf5nn.github.io/" target="_blank" rel="noopener">More from TF5NN</a>
     </footer>
+    </div>
 
     <dialog id="about">
       <h2>About Sightline</h2>
@@ -224,7 +239,7 @@
       </p>
       <p>
         Map tiles © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors. Built
-        with Leaflet, geotiff.js and Plotly. Made by TF5NN.
+        with Leaflet, geotiff.js and Plotly. Made by <a href="https://tf5nn.github.io/" target="_blank" rel="noopener">TF5NN</a>.
       </p>
       <form method="dialog"><button class="primary">Close</button></form>
     </dialog>

@@ -1,17 +1,23 @@
-/* Same palette and fonts as Northbound, so the apps feel like one family. */
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+/* The same palette, fonts and banner as Northbound and Feedpoint, so the apps feel like one family. */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
 :root {
   --paper: #f7f8f3;
   --white: #fff;
   --ink: #203b3d;
   --muted: #76847d;
+  --label: #758375;
   --line: #dfe5de;
+  --field-line: #d5dfd3;
+  --field: #fafbf6;
   --green: #267c62;
-  --green-soft: #e8f2e9;
+  --green-dark: #244c3d;
+  --green-soft: #edf2e9;
   --amber: #b7791f;
+  --red: #c0392b;
   --mono: 'IBM Plex Mono', ui-monospace, monospace;
   --sans: 'DM Sans', Arial, sans-serif;
+  --edge: 46px; /* space at the left and right of the page */
 }
 
 * {
@@ -31,43 +37,140 @@ body {
   font-family: var(--sans);
   font-size: 16px;
   line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
 }
 
-.top {
+button,
+a,
+input,
+select,
+summary {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+a {
+  touch-action: manipulation; /* no double-tap zoom delay on phones */
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+summary:focus-visible {
+  outline: 2px solid #287c64;
+  outline-offset: 3px;
+}
+
+.app-shell {
+  max-width: 1200px;
+  margin: auto;
+}
+
+/* --- Banner: the brand lockup shared with Northbound and Feedpoint ------------------ */
+
+.header {
+  height: 90px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 16px;
   border-bottom: 1px solid var(--line);
-  background: var(--white);
+  padding: 0 var(--edge);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  color: inherit;
+  text-decoration: none;
+  min-width: 0;
 }
 
 .brand h1 {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 17px;
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: 2.2px;
+  line-height: 1.15;
 }
 
-.brand p {
-  margin: 0;
+.brand small {
+  display: block;
+  margin-top: 5px;
+  letter-spacing: 1.35px;
+  font-size: 8px;
+  font-weight: 550;
   color: var(--muted);
-  font-size: 0.875rem;
+  white-space: nowrap;
 }
+
+.brand-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  height: 40px;
+  width: 40px;
+  border-radius: 11px;
+  background: var(--ink);
+  color: #bce3bc;
+}
+
+.brand-icon svg {
+  height: 32px;
+  width: 32px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+}
+
+.brand-icon svg .fill {
+  fill: currentColor;
+  stroke: none;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.callsign,
+button.callsign {
+  font: 500 13px var(--mono);
+  color: var(--ink);
+  text-decoration: none;
+  white-space: nowrap;
+  padding: 7px 10px;
+  min-height: 0;
+  border: 1px solid #cdd9ce;
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+}
+
+.callsign:hover,
+button.callsign:hover:not(:disabled) {
+  border-color: var(--green);
+  background: none;
+}
+
+/* --- Page ---------------------------------------------------------------------------- */
 
 main {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 12px 16px 8px;
+  padding: 22px var(--edge) 8px;
   display: grid;
-  gap: 12px;
+  gap: 14px;
 }
 
 .map-wrap {
   position: relative;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 9px;
   overflow: hidden;
   background: var(--white);
 }
@@ -87,18 +190,19 @@ main {
 
 button {
   font: inherit;
+  font-size: 0.9rem;
   font-weight: 500;
   color: var(--ink);
   background: var(--white);
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  border: 1px solid #d5dfce;
+  border-radius: 5px;
   padding: 10px 14px; /* big enough for a thumb */
   min-height: 44px;
   cursor: pointer;
 }
 
 button:hover:not(:disabled) {
-  border-color: var(--green);
+  background: #eaf1e5;
 }
 
 button:disabled {
@@ -108,21 +212,26 @@ button:disabled {
 }
 
 button.primary {
-  background: var(--green);
-  border-color: var(--green);
-  color: var(--white);
+  background: var(--green-dark);
+  border-color: var(--green-dark);
+  color: #f4f9ed;
 }
 
-button.ghost {
-  border-color: transparent;
-  color: var(--green);
+button.primary:hover:not(:disabled) {
+  background: #1d3f32;
 }
 
 .panel {
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 9px;
   background: var(--white);
-  padding: 12px;
+  padding: 16px;
+}
+
+.panel h2 {
+  margin: 0 0 10px;
+  font-size: 1.05rem;
+  font-weight: 650;
 }
 
 .hint {
@@ -130,152 +239,39 @@ button.ghost {
   color: var(--muted);
 }
 
-.results {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 8px;
-  margin: 0 0 8px;
-}
-
-.results div {
-  background: var(--green-soft);
-  border-radius: 8px;
-  padding: 8px 10px;
-}
-
+/* Small-caps labels, as in the other apps. Units keep their own capitals (dBm, MHz). */
+.fields label,
+.bare-controls label,
 .results dt {
-  font-size: 0.75rem;
-  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 650;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--label);
 }
 
-.results dd {
-  margin: 0;
-  font-family: var(--mono);
-  font-weight: 500;
-  font-size: 0.95rem;
-}
-
-.chart {
-  width: 100%;
-  height: 300px;
-  touch-action: pan-y; /* a finger can still scroll the page past the chart */
-}
-
-.readout {
-  margin: 0 0 4px;
-  min-height: 1.4em;
-  font-family: var(--mono);
-  font-size: 0.85rem;
-  color: var(--ink);
-}
-
-.controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.check {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 44px;
-  font-size: 0.9rem;
-}
-
-.check input {
-  width: 20px;
-  height: 20px;
-  accent-color: var(--green);
-}
-
-.status {
-  margin: 8px 0 0;
-  min-height: 1.4em;
-  font-size: 0.875rem;
-  color: var(--muted);
-}
-
-.status.problem {
-  color: var(--amber);
-  font-weight: 500;
-}
-
-.foot {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 4px 16px 20px;
-  font-size: 0.8rem;
-  color: var(--muted);
-}
-
-.foot a,
-dialog a {
-  color: var(--green);
-}
-
-dialog {
-  max-width: min(640px, calc(100vw - 24px));
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 20px;
-  color: var(--ink);
-}
-
-dialog::backdrop {
-  background: rgb(32 59 61 / 0.35);
-}
-
-dialog h2 {
-  margin-top: 0;
-}
-
-dialog h3 {
-  margin-bottom: 4px;
-}
-
-dialog p,
-dialog li {
-  font-size: 0.925rem;
-}
-
-.panel h2 {
-  margin: 0 0 8px;
-  font-size: 1rem;
-}
-
-.fields {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 10px 12px;
-}
-
-.fields label {
-  display: grid;
-  gap: 4px;
-  font-size: 0.8rem;
-  color: var(--muted);
-}
-
-.fields label.wide {
-  grid-column: 1 / -1;
+.u {
+  text-transform: none;
+  letter-spacing: 0.02em;
 }
 
 .fields input,
-.fields select {
-  font: inherit;
+.fields select,
+.bare-controls input {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
   font-family: var(--mono);
-  font-size: 0.95rem;
-  color: var(--ink);
-  background: var(--white);
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  font-size: 1rem; /* 16 px: anything smaller makes an iPhone zoom in when the box is tapped */
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: #3d5547;
+  background: var(--field);
+  border: 1px solid var(--field-line);
+  border-radius: 5px;
   padding: 9px 10px;
   min-height: 44px;
-  width: 100%;
 }
 
 .fields select {
@@ -283,105 +279,74 @@ dialog li {
 }
 
 .fields input:disabled {
-  background: var(--paper);
+  background: #eef1ea;
   color: var(--muted);
 }
 
-.fields input.invalid {
-  border-color: var(--amber);
-}
-
-.pair {
-  display: grid;
-  grid-template-columns: 1fr 86px;
-  gap: 6px;
-}
-
-.note {
-  margin: 8px 0 0;
-  font-size: 0.8rem;
-  color: var(--muted);
-}
-
-details#advanced {
-  margin-top: 12px;
-  border-top: 1px solid var(--line);
-  padding-top: 8px;
-}
-
-details#advanced summary {
-  cursor: pointer;
-  font-weight: 600;
-  min-height: 36px;
-  display: flex;
-  align-items: center;
-}
-
-details#advanced .fields {
-  margin-top: 8px;
-}
-
-.bare-controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: end;
-  gap: 10px 12px;
-  margin-top: 6px;
-}
-
-.bare-controls label {
-  display: grid;
-  gap: 4px;
-  font-size: 0.8rem;
-  color: var(--muted);
-}
-
-.bare-controls input {
-  font: inherit;
-  font-family: var(--mono);
-  font-size: 0.95rem;
-  color: var(--ink);
-  background: var(--white);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 9px 10px;
-  min-height: 44px;
-  width: 150px;
-}
-
+.fields input.invalid,
 .bare-controls input.invalid {
   border-color: var(--amber);
+  background: #fdf6ea;
 }
 
-.bare-controls button {
-  margin-left: auto;
+.fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
 }
 
-#link-panel .results {
-  margin-bottom: 4px;
+.fields label,
+.bare-controls label {
+  display: block;
 }
 
-#link-panel .fields {
-  margin-top: 10px;
+.fields label.wide {
+  grid-column: 1 / -1;
 }
 
-.verdict-box dd {
+/* --- Profile ------------------------------------------------------------------------- */
+
+.chart {
+  position: relative;
+  width: 100%;
+  height: 300px;
+  touch-action: pan-y; /* a finger can still scroll the page past the chart; sideways it reads the profile */
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* The line that follows the pointer or finger along the profile. */
+.chart-cursor {
+  position: absolute;
+  width: 0;
+  border-left: 1px solid var(--ink);
+  pointer-events: none;
+}
+
+.chart-cursor i {
+  position: absolute;
+  left: -5px;
+  width: 9px;
+  height: 9px;
+  margin-top: -4px;
+  border-radius: 50%;
+  background: var(--ink);
+  border: 2px solid var(--white);
+  box-sizing: content-box;
+  margin-left: -1.5px;
+}
+
+.readout {
+  margin: 2px 0 6px;
+  min-height: 1.45em;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  color: var(--ink);
+}
+
+.readout.idle {
   font-family: var(--sans);
-  font-weight: 700;
-  font-size: 1.15rem;
-}
-
-.verdict-box.solid,
-.verdict-box.good {
-  background: #d5ecd9;
-}
-
-.verdict-box.marginal {
-  background: #fbeedd;
-}
-
-.verdict-box.unlikely {
-  background: #f8dcd8;
+  color: var(--muted);
 }
 
 .legend {
@@ -392,6 +357,10 @@ details#advanced .fields {
   flex-wrap: wrap;
   align-items: center;
   gap: 4px 6px;
+}
+
+.legend-note {
+  margin-left: auto;
 }
 
 .key {
@@ -414,15 +383,211 @@ details#advanced .fields {
 }
 
 .key-blocked {
-  background: #c0392b;
+  background: var(--red);
+}
+
+.bare-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 10px 12px;
+  margin-top: 12px;
+}
+
+.bare-controls label {
+  width: 190px;
+}
+
+.bare-controls button {
+  margin-left: auto;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.controls:has(> [hidden]:only-child) {
+  margin-top: 0;
+}
+
+.status {
+  margin: 10px 0 0;
+  min-height: 1.4em;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.status.problem {
+  color: #8a5a12;
+  font-weight: 500;
+}
+
+/* --- Radio link ---------------------------------------------------------------------- */
+
+.results {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px;
+  margin: 0 0 4px;
+}
+
+.results div {
+  background: var(--green-soft);
+  border: 1px solid #d5e0d4;
+  border-radius: 7px;
+  padding: 9px 11px;
+}
+
+.results dd {
+  margin: 3px 0 0;
+  font-family: var(--mono);
+  font-weight: 500;
+  font-size: 0.95rem;
+  color: #2d4a3c;
+}
+
+.verdict-box dd {
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 1.15rem;
+}
+
+.verdict-box.solid,
+.verdict-box.good {
+  background: #d5ecd9;
+  border-color: #b9dcc0;
+}
+
+.verdict-box.marginal {
+  background: #fbeedd;
+  border-color: #efd9b6;
+}
+
+.verdict-box.unlikely {
+  background: #f8dcd8;
+  border-color: #eec2bb;
+}
+
+#link-panel .fields {
+  margin-top: 14px;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-size: 0.92rem;
+}
+
+.check input {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  accent-color: var(--green);
+}
+
+#link-panel .fields + .check {
+  margin-top: 6px;
+}
+
+.note {
+  margin: 8px 0 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+details#advanced {
+  margin-top: 10px;
+  border-top: 1px solid var(--line);
+  padding-top: 6px;
+}
+
+details#advanced summary {
+  cursor: pointer;
+  font-weight: 650;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  list-style: none;
+}
+
+details#advanced summary::-webkit-details-marker {
+  display: none;
+}
+
+details#advanced summary::before {
+  content: '+';
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--field-line);
+  border-radius: 4px;
+  font: 500 14px var(--mono);
+  color: var(--label);
+}
+
+details#advanced[open] summary::before {
+  content: '−';
+}
+
+details#advanced .fields {
+  margin-top: 8px;
+}
+
+/* --- Footer and About ---------------------------------------------------------------- */
+
+.foot {
+  padding: 8px var(--edge) calc(22px + env(safe-area-inset-bottom));
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.foot a,
+dialog a {
+  color: var(--green);
+}
+
+dialog {
+  max-width: min(640px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 22px;
+  color: var(--ink);
+  background: #fdfef9;
+}
+
+dialog::backdrop {
+  background: rgb(32 59 61 / 0.4);
+}
+
+dialog h2 {
+  margin-top: 0;
+}
+
+dialog h3 {
+  margin-bottom: 4px;
+}
+
+dialog p,
+dialog li {
+  font-size: 0.925rem;
 }
 
 /* The A and B pins on the map. */
 .pin {
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   border-radius: 50% 50% 50% 0;
   transform: rotate(-45deg);
   background: var(--green);
@@ -435,20 +600,19 @@ details#advanced .fields {
   color: var(--white);
   font-family: var(--sans);
   font-weight: 700;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 /* Test page */
 .report {
   max-width: 900px;
-  margin: 0 auto;
-  padding: 16px;
+  padding: 16px var(--edge);
 }
 
 .report pre {
   background: var(--white);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 9px;
   padding: 12px;
   font-family: var(--mono);
   font-size: 0.8rem;
@@ -459,7 +623,7 @@ details#advanced .fields {
 .report .verdict {
   font-weight: 600;
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: 7px;
   background: var(--green-soft);
 }
 
@@ -468,34 +632,118 @@ details#advanced .fields {
   color: #7a4b0b;
 }
 
-@media (max-width: 640px) {
+/* --- Narrower screens (same steps as Northbound) -------------------------------------- */
+
+@media (max-width: 1190px) {
+  :root {
+    --edge: 28px;
+  }
+}
+
+@media (max-width: 720px) {
+  :root {
+    --edge: 14px;
+  }
+
+  .header {
+    height: 75px;
+    padding: 0 20px;
+  }
+
+  .brand {
+    gap: 10px;
+  }
+
+  .brand h1 {
+    font-size: 15px;
+  }
+
+  .brand small {
+    font-size: 6.5px;
+    letter-spacing: 1px;
+  }
+
+  .brand-icon {
+    height: 34px;
+    width: 34px;
+    border-radius: 9px;
+  }
+
+  .brand-icon svg {
+    width: 29px;
+    height: 29px;
+  }
+
   main {
-    padding: 8px;
-    gap: 8px;
+    padding-top: 14px;
+    gap: 12px;
+  }
+
+  .panel {
+    padding: 14px 12px;
   }
 
   #map {
     height: 42vh;
+    height: 42dvh;
+  }
+
+  .map-tools button {
+    flex: 1 1 auto;
   }
 
   .chart {
     height: 260px;
   }
 
-  .brand p {
-    display: none;
+  .readout {
+    min-height: 2.9em; /* room for two lines, so the page does not jump while a finger moves */
+  }
+
+  .legend-note {
+    margin-left: 10px;
   }
 
   .bare-controls label {
     flex: 1 1 130px;
-  }
-
-  .bare-controls input {
-    width: 100%;
+    width: auto;
   }
 
   .bare-controls button {
     flex: 1 1 100%;
     margin-left: 0;
+    min-height: 48px;
+  }
+
+  .results {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Phones: the banner keeps the name and the two most useful links; GitHub moves to the foot of the page. */
+@media (max-width: 520px) {
+  .callsign.github {
+    display: none;
+  }
+
+  .header-right {
+    gap: 8px;
+  }
+}
+
+/* Very narrow phones: the name and About. The TF5NN link is at the foot of the page and in About. */
+@media (max-width: 380px) {
+  .header {
+    padding: 0 14px;
+  }
+
+  .callsign.home {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto !important;
   }
 }

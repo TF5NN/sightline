@@ -22,6 +22,33 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 TILES = os.path.join(ROOT, "test", "tiles")
 OUT = os.path.join(ROOT, "test", "ui", "out")
 
+# The page's fonts come from Google Fonts, which a test machine may not reach; then the browser
+# falls back to Arial and widths are slightly off. Point SIGHTLINE_FONTS at a folder holding
+# node_modules/@fontsource-variable/dm-sans and node_modules/@fontsource/ibm-plex-mono
+# (npm install them there) and the real fonts are used instead.
+FONTS = os.environ.get("SIGHTLINE_FONTS")
+FONT_FILES = {
+    "dm-sans.woff2": "node_modules/@fontsource-variable/dm-sans/files/dm-sans-latin-wght-normal.woff2",
+    "plex-400.woff2": "node_modules/@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-400-normal.woff2",
+    "plex-500.woff2": "node_modules/@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-500-normal.woff2",
+}
+FONT_CSS = """
+@font-face { font-family: 'DM Sans'; font-weight: 100 1000; src: url(https://fonts.test/dm-sans.woff2) format('woff2'); }
+@font-face { font-family: 'IBM Plex Mono'; font-weight: 400; src: url(https://fonts.test/plex-400.woff2) format('woff2'); }
+@font-face { font-family: 'IBM Plex Mono'; font-weight: 500; src: url(https://fonts.test/plex-500.woff2) format('woff2'); }
+"""
+
+
+def use_real_fonts(page):
+    if not FONTS:
+        return
+    cors = {"Access-Control-Allow-Origin": "*"}
+    page.route("https://fonts.googleapis.com/**", lambda route: route.fulfill(content_type="text/css", body=FONT_CSS, headers=cors))
+    page.route(
+        "https://fonts.test/**",
+        lambda route: route.fulfill(path=os.path.join(FONTS, FONT_FILES[route.request.url.rsplit("/", 1)[1]]), content_type="font/woff2", headers=cors),
+    )
+
 
 class Quiet(http.server.SimpleHTTPRequestHandler):
     def log_message(self, *args):
@@ -92,7 +119,9 @@ def main():
     with sync_playwright() as pw:
         browser = pw.chromium.launch(channel="chrome", headless=True)
         for name, viewport in [("desktop", {"width": 1200, "height": 900}), ("phone", {"width": 390, "height": 844})]:
-            page = browser.new_page(viewport=viewport)
+            phone = name == "phone"
+            page = browser.new_page(viewport=viewport, has_touch=phone, is_mobile=phone)
+            use_real_fonts(page)
             errors = []
             page.on("pageerror", lambda e: errors.append(str(e)))
             # Real script errors only. Missing terrain tiles (403 from the tile server) are normal:
@@ -131,6 +160,31 @@ def main():
             check(150 < ground < 400, f"{name}: hover readout, ground above sea level not above the ellipsoid ({readout})")
             check("above the line of sight" in readout and "Fresnel" not in readout, f"{name}: the hill is above the line of sight, no Fresnel talk")
             page.mouse.move(5, 5)
+
+            # The page must never be wider than the screen (no sideways scrolling), banner included.
+            wider = "document.documentElement.scrollWidth - document.documentElement.clientWidth"
+            check(page.evaluate(wider) <= 0, f"{name}: nothing sticks out sideways ({page.evaluate(wider)} px)")
+            check(page.is_visible(".brand-icon svg") and "SIGHTLINE" in page.inner_text(".brand h1"), f"{name}: the family banner is there")
+            gap = page.evaluate("document.querySelector('.header-right').getBoundingClientRect().left - document.querySelector('.brand').getBoundingClientRect().right")
+            check(gap >= 4, f"{name}: the banner name and links do not collide ({gap:.0f} px apart)")
+            if phone:
+                # A finger: tap the profile and the reading appears and stays after the finger lifts.
+                page.locator("#chart").scroll_into_view_if_needed()
+                box = page.locator("#chart .nsewdrag").bounding_box()
+                page.touchscreen.tap(box["x"] + box["width"] * 0.25, box["y"] + box["height"] * 0.5)
+                page.wait_for_function("document.getElementById('readout').textContent.includes('· ground')", timeout=5000)
+                page.wait_for_timeout(300)
+                reading = page.inner_text("#readout")
+                check("· ground" in reading and page.is_visible("#chart .chart-cursor"), f"{name}: a tap reads the profile and the reading stays ({reading})")
+                for width in (360, 320):
+                    page.set_viewport_size({"width": width, "height": 740})
+                    page.wait_for_timeout(400)
+                    check(page.evaluate(wider) <= 0, f"{name}: fits a {width} px wide screen ({page.evaluate(wider)} px over)")
+                    gap = page.evaluate("document.querySelector('.header-right').getBoundingClientRect().left - document.querySelector('.brand').getBoundingClientRect().right")
+                    check(gap >= 4, f"{name}: the banner name and links do not collide at {width} px ({gap:.0f} px apart)")
+                    page.screenshot(path=os.path.join(OUT, f"phone-{width}.png"), clip={"x": 0, "y": 0, "width": width, "height": 90})
+                page.set_viewport_size(viewport)
+                page.wait_for_timeout(400)
 
             # "Estimate radio link" opens the radio part, on the 2 m band with a 5 W handheld and rubber duck.
             page.click("#link-toggle")
@@ -200,7 +254,7 @@ def main():
             margin_same = float(page.inner_text("#r-margin").split()[0].replace("−", "-"))
             page.check("#split")
             page.wait_for_selector("#radio-b", state="visible")
-            check(page.input_value("#antenna-b") == "duck" and page.inner_text("#radio-a-label") == "Radio at A",
+            check(page.input_value("#antenna-b") == "duck" and page.text_content("#radio-a-label") == "Radio at A",
                   f"{name}: the split starts as a copy of A")
             page.select_option("#antenna-b", "yagi3")
             page.wait_for_function(f"parseFloat(document.getElementById('r-margin').textContent.replace('−', '-')) > {margin_same + 5}", timeout=15000)

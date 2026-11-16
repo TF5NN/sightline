@@ -15,7 +15,7 @@
 //
 // L (Leaflet), GeoTIFF and Plotly are loaded by index.html before this file.
 
-import { clearProfile, drawProfile } from './chart.js';
+import { clearProfile, drawProfile, isCompact } from './chart.js';
 import { geodesicDistance, pointAlong } from './geo.js';
 import { seaLevelOffset } from './geoid.js';
 import {
@@ -146,8 +146,8 @@ function pinIcon(label) {
   return L.divIcon({
     className: '',
     html: `<div class="pin"><span>${label}</span></div>`,
-    iconSize: [30, 30],
-    iconAnchor: [15, 30],
+    iconSize: [34, 34], // big enough to grab with a thumb
+    iconAnchor: [17, 34],
   });
 }
 
@@ -296,10 +296,12 @@ function render() {
       }
     : { km, terrain: ground };
 
-  el.readout.textContent = '';
+  idleReadout();
+  state.compact = isCompact(el.chart);
   drawProfile(Plotly, el.chart, view, {
     onHover: (index) => {
       if (index >= n) return;
+      el.readout.classList.remove('idle');
       hoverDot.setLatLng([track.lat[index], track.lon[index]]).addTo(map);
       let text = `${fmtDistance(track.distance[index])} from A · ground ${fmtHeight(ground[index])}`;
       if (link && index > 0 && index < n - 1 && Number.isFinite(ground[index])) {
@@ -314,13 +316,22 @@ function render() {
     },
     onLeave: () => {
       hoverDot.remove();
-      el.readout.textContent = '';
+      idleReadout();
     },
   });
 
   if (link) drawProblemsOnMap(track, link.path.status);
   else problemLines.clearLayers();
   showLinkResults();
+}
+
+const fingers = globalThis.matchMedia?.('(pointer: coarse)').matches;
+/** Nothing is being read off the profile: say how to. */
+function idleReadout() {
+  el.readout.classList.add('idle');
+  el.readout.textContent = fingers
+    ? 'Slide a finger along the profile to read the heights.'
+    : 'Move the pointer along the profile to read the heights.';
 }
 
 /** Fill in the radio link panel (it may be closed; the numbers are kept ready either way). */
@@ -818,6 +829,15 @@ el.locate.addEventListener('click', () => {
 });
 
 el.aboutOpen.addEventListener('click', () => el.about.showModal());
+
+// Turning a phone changes the room the chart has: redraw it with the margins that fit.
+let resizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    if (state.shown && state.draft && isCompact(el.chart) !== state.compact) render();
+  }, 200);
+});
 
 let lastWrittenHash = '';
 const rememberHash = () => {
