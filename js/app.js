@@ -31,6 +31,7 @@ import {
 } from './profile.js';
 import {
   STATUS_BLOCKED,
+  STATUS_GRAZING,
   dbmToWatts,
   detailStretches,
   linkEstimate,
@@ -77,6 +78,7 @@ const el = {
   readout: $('readout'),
   legend: $('legend'),
   legendFresnel: $('legend-fresnel'),
+  legendGrazing: $('legend-grazing'),
   bareControls: $('bare-controls'),
   linkToggle: $('link-toggle'),
   linkPanel: $('link-panel'),
@@ -166,23 +168,36 @@ function drawPath() {
   pathLine.setLatLngs(line);
 }
 
-/** Colour the blocked stretches of the path red on the map. */
-function drawProblemsOnMap(track, status) {
+/**
+ * Colour the problem stretches of the path on the map: red where the ground is
+ * above the line of sight, and (with the radio link part open) amber where it
+ * comes inside 60% of the Fresnel zone.
+ */
+function drawProblemsOnMap(track, status, showGrazing) {
   problemLines.clearLayers();
-  let points = null;
+  let current = null; // { kind, points }
   const finish = () => {
-    if (points && points.length > 1) {
-      L.polyline(points, { color: '#c0392b', weight: 6, opacity: 0.95, interactive: false }).addTo(problemLines);
+    if (current && current.points.length > 1) {
+      L.polyline(current.points, {
+        color: current.kind === STATUS_BLOCKED ? '#c0392b' : '#d98a00',
+        weight: 6,
+        opacity: 0.95,
+        interactive: false,
+      }).addTo(problemLines);
     }
-    points = null;
+    current = null;
   };
   for (let i = 0; i < status.length; i++) {
-    if (status[i] !== STATUS_BLOCKED) {
+    const kind = status[i];
+    if (kind !== STATUS_BLOCKED && !(showGrazing && kind === STATUS_GRAZING)) {
       finish();
       continue;
     }
-    if (!points) points = i > 0 ? [[track.lat[i - 1], track.lon[i - 1]]] : [];
-    points.push([track.lat[i], track.lon[i]]);
+    if (!current || current.kind !== kind) {
+      finish();
+      current = { kind, points: i > 0 ? [[track.lat[i - 1], track.lon[i - 1]]] : [] };
+    }
+    current.points.push([track.lat[i], track.lon[i]]);
   }
   finish();
 }
@@ -278,6 +293,7 @@ function render() {
   el.readout.hidden = false;
   el.legend.hidden = !link;
   el.legendFresnel.hidden = !showFresnel;
+  el.legendGrazing.hidden = !linkOpen;
   el.bareControls.hidden = false;
 
   const view = link
@@ -288,6 +304,7 @@ function render() {
         fresnel: link.path.fresnel,
         status: link.path.status,
         showFresnel,
+        showGrazing: linkOpen,
         // The loss labels on the ridges belong with the Fresnel zone: detail for those who ask for it.
         edges: showFresnel
           ? link.diffraction.edges.map((e) => ({ km: e.distance / 1000, height: e.height, loss: e.loss }))
@@ -320,7 +337,7 @@ function render() {
     },
   });
 
-  if (link) drawProblemsOnMap(track, link.path.status);
+  if (link) drawProblemsOnMap(track, link.path.status, linkOpen);
   else problemLines.clearLayers();
   showLinkResults();
 }

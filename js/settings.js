@@ -80,7 +80,7 @@ export function settingsForBand(bandId, previous = null) {
     b: { ...start },
     overrides: {},
     linkOpen: previous?.linkOpen ?? false, // is the "estimate radio link" part showing?
-    fresnel: previous?.fresnel ?? false, // is the Fresnel zone drawn?
+    fresnel: previous?.fresnel ?? true, // draw the Fresnel zone while the radio link part is open?
     powerUnit: previous?.powerUnit ?? 'W',
     detail: previous?.detail ?? 'smart',
     maxSamples: previous?.maxSamples ?? DEFAULT_MAX_SAMPLES,
@@ -185,7 +185,7 @@ export function settingsToAddress(s) {
     parts.push(`${key}=${trim(s.overrides[name])}`);
   }
   if (s.linkOpen) parts.push('link=1');
-  if (s.fresnel) parts.push('fz=1');
+  if (!s.fresnel) parts.push('fz=0');
   if (s.powerUnit !== 'W') parts.push(`pu=${s.powerUnit}`);
   if (s.detail !== 'smart') parts.push(`detail=${s.detail}`);
   if (s.maxSamples !== DEFAULT_MAX_SAMPLES) parts.push(`n=${s.maxSamples}`);
@@ -252,7 +252,7 @@ export function settingsFromAddress(params) {
       if (validOverride(name, value)) s.overrides[name] = value;
     }
     s.linkOpen = params.get('link') === '1';
-    s.fresnel = params.get('fz') === '1';
+    s.fresnel = params.get('fz') !== '0';
   }
   for (const [end, key] of [['a', 'ha'], ['b', 'hb']]) {
     const h = Number(params.get(key));

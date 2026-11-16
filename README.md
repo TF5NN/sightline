@@ -14,8 +14,9 @@ is deliberately bare: the map, the terrain profile and the line of sight, with
 ground above the line drawn in red. "Estimate radio link" opens the radio side:
 pick a band, then a radio, then an antenna (it starts on 2 m, a 5 W handheld
 and a rubber duck) and get free-space loss, terrain loss, received signal,
-margin and a verdict. Both ends use the same station unless you tick
-"Different station at each end". The Fresnel zone is a switch, off by default.
+margin and a verdict, with the Fresnel zone drawn on the profile (a tick box
+switches it off). Both ends use the same station unless you tick "Different
+station at each end".
 
 On a phone, slide a finger along the profile to read the heights; the reading
 stays when you lift it. The banner, colours and fonts are shared with
@@ -44,9 +45,11 @@ ellipsoid, so the app corrects it with a coarse EGM96 table (`js/geoid-data.js`)
 
 - Earth curvature is added to the terrain (k = 4/3 by default), so the line of
   sight is straight.
-- Blocked means the ground is above the line of sight; that is the only thing
-  coloured (red). With the Fresnel zone switched on, the chart also shows the
-  zone and its 60% line, and the loss at each ridge the signal bends over.
+- Blocked means the ground is above the line of sight; it is drawn red on
+  the chart and the map, always. With the radio side open, grazing stretches
+  (ground inside 60% of the first Fresnel zone) are drawn amber as well, and
+  the chart shows the Fresnel zone, its 60% line, and the loss at each ridge
+  the signal bends over.
 - Terrain loss is worked out two ways and the larger is used: knife-edge
   diffraction (ITU-R P.526 approximation) on the worst obstacle and the worst
   one on each side of it; and the Bullington single-ridge method with the
@@ -62,6 +65,25 @@ ellipsoid, so the app corrects it with a coarse EGM96 table (`js/geoid-data.js`)
 
 It does not model reflections, vegetation growth, snow or receiver noise.
 Read the margin as give or take 10 dB.
+
+## Data and privacy
+
+Your points and settings stay in the browser and in the page address; the
+terrain requests go straight from your browser to the public ArcticDEM archive.
+The device's location is asked for only when "My location" is pressed and is
+not sent anywhere.
+
+Visits are counted anonymously with [GoatCounter](https://www.goatcounter.com/)
+(site code `tf5nn`, private dashboard), the same as Northbound and Feedpoint:
+page opens by country and referring site, plus two actions, the links
+`main-site-from-sightline` and `github-from-sightline`. No cookies are set. The
+counter is told a fixed path (`/sightline/`), so the points and settings in the
+page address are never sent. It loads separately from the app, so Sightline
+works the same if it is blocked. Local previews are not counted. To leave your
+own visits out, open the app once with `#toggle-goatcounter` at the end of the
+address in each browser you use. The stylesheet loads DM Sans and IBM Plex Mono
+from Google Fonts, with local fallback fonts; the map pictures come from
+OpenStreetMap.
 
 ## Files
 

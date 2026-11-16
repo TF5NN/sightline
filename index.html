@@ -27,8 +27,10 @@
       </a>
       <div class="header-right">
         <button id="about-open" class="callsign" type="button">About</button>
-        <a class="callsign home" href="https://tf5nn.github.io/" target="_blank" rel="noopener" title="More projects from TF5NN">TF5NN ↗</a>
-        <a class="callsign github" href="https://github.com/TF5NN/sightline" target="_blank" rel="noopener" title="Source code on GitHub">GitHub ↗</a>
+        <a class="callsign home" href="https://tf5nn.github.io/" target="_blank" rel="noopener" title="More projects from TF5NN"
+           data-goatcounter-click="main-site-from-sightline" data-goatcounter-title="Sightline: TF5NN main site link">TF5NN ↗</a>
+        <a class="callsign github" href="https://github.com/TF5NN/sightline" target="_blank" rel="noopener" title="Source code on GitHub"
+           data-goatcounter-click="github-from-sightline" data-goatcounter-title="Sightline: GitHub link">GitHub ↗</a>
       </div>
     </header>
 
@@ -50,6 +52,7 @@
         <p id="legend" class="legend" hidden>
           <span class="key key-los"></span>Line of sight
           <span class="key key-blocked"></span>Blocked
+          <span id="legend-grazing" hidden><span class="key key-grazing"></span>Grazing</span>
           <span id="legend-fresnel" hidden><span class="key key-fresnel"></span>Fresnel zone</span>
           <span class="legend-note">Heights in metres, Earth's curve included</span>
         </p>
@@ -187,8 +190,10 @@
     <footer class="foot">
       Terrain: ArcticDEM, Polar Geospatial Center. Map: © OpenStreetMap contributors.
       <a href="step0.html">Data connection test</a> ·
-      <a href="https://github.com/TF5NN/sightline" target="_blank" rel="noopener">Source code</a> ·
-      <a href="https://tf5nn.github.io/" target="_blank" rel="noopener">More from TF5NN</a>
+      <a href="https://github.com/TF5NN/sightline" target="_blank" rel="noopener"
+         data-goatcounter-click="github-from-sightline" data-goatcounter-title="Sightline: GitHub link">Source code</a> ·
+      <a href="https://tf5nn.github.io/" target="_blank" rel="noopener"
+         data-goatcounter-click="main-site-from-sightline" data-goatcounter-title="Sightline: TF5NN main site link">More from TF5NN</a>
     </footer>
     </div>
 
@@ -198,6 +203,10 @@
         Sightline draws the terrain along the straight path between two points. It reads 2 m elevation data directly
         from the public ArcticDEM archive, which covers land north of about 60°N. Nothing is stored on a server: your
         points live only in this page and in its address, which you can copy to share a path.
+      </p>
+      <p>
+        Visits are counted anonymously with GoatCounter: that the page was opened, from which country and which site
+        led here. No cookies, and your points and settings are never sent.
       </p>
       <p>
         The verdict is an estimate from a simple, open model: free-space loss, plus terrain loss worked out two ways
@@ -225,7 +234,9 @@
         </li>
         <li>
           Red on the chart and the map means the ground is above the line of sight. "Estimate radio link" adds the
-          radio side: pick a band, a radio and an antenna, and it works out whether the link should hold.
+          radio side: pick a band, a radio and an antenna, and it works out whether the link should hold. It also
+          draws the Fresnel zone, the space the signal needs around the line of sight, and marks in amber where the
+          ground comes inside 60% of it ("grazing").
         </li>
       </ul>
       <h3>Credits</h3>
@@ -248,5 +259,9 @@
     <script src="vendor/geotiff.js"></script>
     <script src="vendor/plotly-basic.min.js"></script>
     <script type="module" src="js/app.js"></script>
+    <!-- Anonymous visit counting (GoatCounter): no cookies, country-level only. The path is fixed, so the
+         points and settings in the page address are never sent. See README, Data and privacy. -->
+    <script data-goatcounter="https://tf5nn.goatcounter.com/count" data-goatcounter-settings='{"path": "/sightline/"}'
+            async src="https://gc.zgo.at/count.js"></script>
   </body>
 </html>

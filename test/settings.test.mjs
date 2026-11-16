@@ -23,7 +23,7 @@ test('the starting setup is a 2 m, 5 W handheld with a rubber duck, link part cl
   assert.equal(s.a.antenna, 'duck');
   assert.equal(s.split, false);
   assert.equal(s.linkOpen, false);
-  assert.equal(s.fresnel, false);
+  assert.equal(s.fresnel, true);
   const r = resolveRadio(s);
   assert.equal(r.freqMHz, 145.5);
   assert.equal(r.powerA, 5);

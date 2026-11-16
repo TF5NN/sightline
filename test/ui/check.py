@@ -144,8 +144,10 @@ def main():
             bare_traces = page.evaluate(traces)
             check(page.is_hidden("#link-panel") and page.is_hidden("#r-verdict"), f"{name}: no link verdict in the opening view")
             check(page.is_hidden("#legend-fresnel"), f"{name}: no Fresnel zone in the opening view")
+            amber_lines = "Object.keys(sightline.map._layers).filter((k) => sightline.map._layers[k].options?.color === '#d98a00').length"
+            check(page.evaluate(amber_lines) == 0 and page.is_hidden("#legend-grazing"), f"{name}: no amber in the opening view")
             check(page.is_visible("#height-a") and page.is_visible("#link-toggle"), f"{name}: antenna heights and the link button are there")
-            check("link=1" not in page.url and "fz=1" not in page.url, f"{name}: the bare view is what a shared link opens too")
+            check("link=1" not in page.url, f"{name}: the bare view is what a shared link opens too")
             blocked_lines = "Object.keys(sightline.map._layers).filter((k) => sightline.map._layers[k].options?.color === '#c0392b').length"
             check(page.evaluate(blocked_lines) > 0, f"{name}: the blocked stretch is drawn red on the map")
             page.screenshot(path=os.path.join(OUT, f"{name}-bare.png"), full_page=True)
@@ -199,14 +201,20 @@ def main():
             check("link=1" in page.url and "band=2m" in page.url, f"{name}: the open panel and the band are kept in the page address")
             check(page.inner_text("#link-toggle") == "Hide radio link", f"{name}: the button now hides the panel")
 
-            # The Fresnel zone is a switch, off until asked for.
-            check(page.evaluate(traces) == bare_traces, f"{name}: opening the panel does not add the Fresnel zone")
-            page.check("#fresnel")
-            page.wait_for_function(f"{traces} > {bare_traces}", timeout=5000)
-            check(page.is_visible("#legend-fresnel") and "fz=1" in page.url, f"{name}: the Fresnel zone can be switched on")
+            # With the radio part open the Fresnel zone is drawn and grazing stretches turn amber, on the chart and the map.
+            link_traces = page.evaluate(traces)
+            check(link_traces > bare_traces and page.is_visible("#legend-fresnel") and page.is_checked("#fresnel"),
+                  f"{name}: opening the radio part shows the Fresnel zone")
+            check(page.evaluate(amber_lines) > 0 and page.is_visible("#legend-grazing"), f"{name}: grazing stretches are amber on the map")
             page.screenshot(path=os.path.join(OUT, f"{name}-link.png"), full_page=True)
             page.uncheck("#fresnel")
-            page.wait_for_function(f"{traces} === {bare_traces}", timeout=5000)
+            page.wait_for_function(f"{traces} < {link_traces}", timeout=5000)
+            check(page.is_hidden("#legend-fresnel") and "fz=0" in page.url, f"{name}: the Fresnel zone can be switched off, and that is kept in the address")
+            page.check("#fresnel")
+            page.wait_for_function(f"{traces} === {link_traces}", timeout=5000)
+            page.click("#link-toggle")
+            check(page.evaluate(amber_lines) == 0 and page.is_hidden("#legend-fresnel"), f"{name}: hiding the radio part takes the amber and the Fresnel zone away again")
+            page.click("#link-toggle")
 
             # Raising both masts clears the hill; the terrain loss goes away.
             margin_before = page.inner_text("#r-margin")

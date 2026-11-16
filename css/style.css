@@ -386,6 +386,10 @@ button.primary:hover:not(:disabled) {
   background: var(--red);
 }
 
+.key-grazing {
+  background: #d98a00;
+}
+
 .bare-controls {
   display: flex;
   flex-wrap: wrap;

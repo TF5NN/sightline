@@ -11,6 +11,7 @@ const LINE = '#dfe5de';
 const GREEN = '#267c62';
 const BLUE = '#2f6fb7';
 const RED = '#c0392b';
+const AMBER = '#d98a00';
 
 /** Narrow charts (phones) get tighter margins and no title on the height axis. */
 export const isCompact = (element) => element.clientWidth > 0 && element.clientWidth < 520;
@@ -25,7 +26,8 @@ const gapsToNull = (values) => Array.from(values, (v) => (Number.isFinite(v) ? v
  *   terrain:  ground height with the Earth's bulge added (NaN = no data)
  *   los:      height of the line of sight at each sample
  *   fresnel:  radius of the first Fresnel zone at each sample
- *   status:   per sample; 2 means the ground is above the line of sight
+ *   status:   per sample; 1 = grazing (inside 60% of the Fresnel zone), 2 = above the line of sight
+ *   showGrazing: draw the grazing stretches in amber (off unless asked for)
  *   showFresnel: draw the Fresnel zone (off unless asked for)
  *   edges:    [{ km, height, loss }] diffraction edges to label (optional)
  *   masts:    { baseA, tipA, baseB, tipB }
@@ -83,6 +85,13 @@ export function drawProfile(Plotly, element, view, { onHover, onLeave } = {}) {
       // Colour a sample and its neighbours, so a single bad sample still shows as a short line.
       if (view.status[i] === 2) for (const j of [i - 1, i, i + 1]) if (j >= 0 && j < n) blocked[j] = terrain[j];
     }
+    // Ground that comes close to the line of sight (inside 60% of the Fresnel zone) in amber, when asked for.
+    const grazing = new Array(n).fill(null);
+    if (view.showGrazing) {
+      for (let i = 0; i < n; i++) {
+        if (view.status[i] === 1) for (const j of [i - 1, i, i + 1]) if (j >= 0 && j < n) grazing[j] = terrain[j];
+      }
+    }
     if (showFresnel) {
       const lower = new Array(n);
       const upper = new Array(n);
@@ -108,6 +117,7 @@ export function drawProfile(Plotly, element, view, { onHover, onLeave } = {}) {
     }
     traces.push(
       { x: view.km, y: Array.from(view.los), mode: 'lines', line: { color: BLUE, width: 1.75 }, ...quiet },
+      { x: view.km, y: grazing, mode: 'lines', line: { color: AMBER, width: 3.5 }, connectgaps: false, ...quiet },
       { x: view.km, y: blocked, mode: 'lines', line: { color: RED, width: 3.5 }, connectgaps: false, ...quiet },
     );
     if (view.masts) {
