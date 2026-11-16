@@ -126,6 +126,9 @@ is known everywhere, so the reader can be compared with the right answer.
 
 ## Checking the model against real links
 
+What has been checked so far, and what was found, is written up in
+[docs/validation.md](docs/validation.md).
+
 `batch.html` (not linked from the app) takes a pasted list of stations and the
 links measured between them, runs every pair through the same terrain and radio
 sums as the app, and prints predicted against measured SNR. It assumes the
