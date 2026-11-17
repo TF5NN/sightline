@@ -54,6 +54,15 @@ import {
   settingsToAddress,
   validOverride,
 } from './settings.js';
+import {
+  readStations,
+  stationBand,
+  stationFrequencies,
+  stationFrequencyParts,
+  stationKind,
+  stationLabel,
+  stationLayers,
+} from './stations.js';
 import { createTerrain } from './terrain.js';
 
 const { L, GeoTIFF, Plotly } = globalThis;
@@ -75,6 +84,7 @@ const LABELS = ['A', 'B'];
 const $ = (id) => document.getElementById(id);
 const el = {
   hint: $('hint'),
+  stationsLine: $('stations-line'),
   chart: $('chart'),
   readout: $('readout'),
   legend: $('legend'),
@@ -124,6 +134,9 @@ const state = {
   approved: false, // has the user said yes to a large 2 m download for this path?
   shown: null, // what is on screen: { track, ground, link }
   pending: false,
+  stations: [], // from data/stations.csv, once it has loaded
+  layersOn: new Set(), // ids of the station layers showing on the map
+  layersWanted: [], // layer ids named in the page address, switched on once the sheet has loaded
 };
 
 // --- map ---------------------------------------------------------------------
@@ -145,7 +158,7 @@ const backgrounds = {
 };
 let background = 'map';
 backgrounds.map.addTo(map);
-L.control.layers({ Map: backgrounds.map, Satellite: backgrounds.sat }, null, { position: 'topright' }).addTo(map);
+const layersControl = L.control.layers({ Map: backgrounds.map, Satellite: backgrounds.sat }, null, { position: 'topright' }).addTo(map);
 function showBackground(name) {
   background = backgrounds[name] ? name : 'map';
   for (const [key, layer] of Object.entries(backgrounds)) {
@@ -239,6 +252,7 @@ function syncMarkers() {
       const marker = L.marker([wp.lat, wp.lon], { draggable: true, icon: pinIcon(LABELS[index]) }).addTo(map);
       marker.on('drag', () => {
         const pos = marker.getLatLng();
+        // A pin that is dragged away is no longer on the station it was put on.
         state.waypoints[index] = { lat: pos.lat, lon: pos.lng };
         drawPath();
       });
@@ -261,14 +275,230 @@ map.on('click', (event) => {
   pathChanged();
 });
 
+// --- station layers (repeaters and other fixed stations from data/stations.csv) ---
+
+const stationGroups = new Map(); // layer id -> the Leaflet group holding its markers
+const stationById = (id) => state.stations.find((s) => s.id.toLowerCase() === String(id).toLowerCase());
+
+function stationIcon() {
+  return L.divIcon({
+    className: '',
+    html: '<div class="station-dot"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v11M8 20l4-11 4 11M9.2 16.5h5.6"/><path d="M8.2 6.8a5.4 5.4 0 0 1 7.6 0M5.6 4.2a9 9 0 0 1 12.8 0"/></svg></div>',
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+    popupAnchor: [0, -12],
+  });
+}
+
+/** One line of a station's details: a small label and its value. */
+function detailLine(label, value, note = '') {
+  const line = document.createElement('p');
+  line.className = 'detail';
+  const key = document.createElement('span');
+  key.className = 'k';
+  key.textContent = label;
+  const text = document.createElement('span');
+  text.textContent = value;
+  if (note) {
+    const small = document.createElement('span');
+    small.className = 'assumed';
+    small.textContent = ` ${note}`;
+    text.append(small);
+  }
+  line.append(key, text);
+  return line;
+}
+
+/** What a tap on a site shows: every station there, one card each. */
+function sitePopup(stations) {
+  const box = document.createElement('div');
+  box.className = 'station-popup';
+  box.append(...stations.map(stationCard));
+  return box;
+}
+
+/** One station: who it is, how to work it, and the buttons to use it as a point. */
+function stationCard(station) {
+  const box = document.createElement('div');
+  box.className = 'station-card';
+  const title = document.createElement('h3');
+  title.textContent = [station.callsign, station.name].filter(Boolean).join(' ');
+  const kind = document.createElement('p');
+  kind.className = 'kind';
+  kind.textContent = [stationKind(station), station.status].filter(Boolean).join(' · ');
+  box.append(title, kind);
+
+  const frequencies = stationFrequencyParts(station);
+  if (frequencies.length) {
+    // What to put in the radio, one figure per line.
+    const dial = document.createElement('div');
+    dial.className = 'freq';
+    dial.append(...frequencies.map((part) => detailLine(part.label, part.value)));
+    box.append(dial);
+  }
+  const guess = (key) => (station.assumed.includes(key) ? '(assumed)' : '');
+  box.append(
+    detailLine('Power', `${station.powerW} W`, guess('powerW')),
+    detailLine('Antenna', `${station.antenna ? `${station.antenna}, ` : ''}${station.gainDbi} dBi`, guess('gainDbi')),
+    detailLine('Height', `${station.heightM} m above ground`, guess('heightM')),
+  );
+  if (station.confidence) box.append(detailLine('Position', `${station.confidence} confidence`));
+  if (station.notes) {
+    const notes = document.createElement('p');
+    notes.className = 'notes';
+    notes.textContent = station.notes;
+    box.append(notes);
+  }
+
+  const buttons = document.createElement('p');
+  buttons.className = 'use';
+  // Point B only makes sense once there is a point A.
+  const ends = state.waypoints.length === 0 ? [0] : [0, 1];
+  for (const index of ends) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = `Use as ${LABELS[index]}`;
+    button.dataset.end = LABELS[index].toLowerCase();
+    button.addEventListener('click', () => {
+      map.closePopup();
+      useStation(station, index);
+    });
+    buttons.append(button);
+  }
+  box.append(buttons);
+  return box;
+}
+
+/** Put point A or B on a station and fill in that end of the link from what the sheet says about it. */
+function useStation(station, index) {
+  state.waypoints[index] = { lat: station.lat, lon: station.lon, station: station.id };
+
+  let s = state.settings;
+  const { band, exact, frequency } = stationBand(station);
+  if (band !== s.band) {
+    const previous = s;
+    s = settingsForBand(band, previous);
+    s.a.height = previous.a.height;
+    s.b.height = previous.b.height;
+  }
+  // From here on the two ends are different stations. The other end starts as whatever both ends were.
+  if (!s.split) s = { ...mirrorStations(s), split: true };
+  const end = index === 0 ? 'a' : 'b';
+  const letter = index === 0 ? 'A' : 'B';
+  if (RADIOS.repeater.bands.includes(band)) s[end].radio = 'repeater';
+  // An antenna from the list if one has this gain; otherwise the collinear, with the gain typed over it.
+  const listed = antennasFor(band).find(([, a]) => a.gain === station.gainDbi);
+  if (listed) s[end].antenna = listed[0];
+  else if (ANTENNAS.collinear.bands.includes(band)) s[end].antenna = 'collinear';
+  s[end].height = station.heightM;
+  const set = (name, value, usual) => {
+    if (value === usual) delete s.overrides[name];
+    else s.overrides[name] = value;
+  };
+  set(`power${letter}`, station.powerW, RADIOS[s[end].radio].powerW);
+  set(`gain${letter}`, station.gainDbi, ANTENNAS[s[end].antenna].gain);
+  set(`cable${letter}`, station.cableDb, 0);
+  delete s.overrides[`sens${letter}`];
+  // A station on a frequency none of the bands is made for: use its own frequency.
+  if (!exact && frequency !== null) s.overrides.freqMHz = frequency;
+  else if (band !== state.settings.band) delete s.overrides.freqMHz;
+
+  state.settings = s;
+  showSettings();
+  pathChanged();
+}
+
+/** Under the hint: which stations the two points are on, and how to work them. */
+function showStationsLine() {
+  const lines = [];
+  state.waypoints.forEach((wp, index) => {
+    const station = wp.station && stationById(wp.station);
+    if (!station) return;
+    const frequencies = stationFrequencies(station);
+    lines.push(`${LABELS[index]}: ${stationLabel(station)}${frequencies ? `. ${frequencies}.` : ''}`);
+  });
+  el.stationsLine.hidden = lines.length === 0;
+  el.stationsLine.replaceChildren(
+    ...lines.map((text) => {
+      const line = document.createElement('span');
+      line.textContent = text;
+      return line;
+    }),
+  );
+}
+
+/** Switch on the station layers with these ids (once the sheet has loaded). */
+function showLayers(ids) {
+  for (const [id, group] of stationGroups) {
+    if (ids.includes(id)) group.addTo(map);
+    else group.remove();
+  }
+}
+
+async function loadStations() {
+  try {
+    const response = await fetch('data/stations.csv', { cache: 'no-cache' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const { stations, problems } = readStations(await response.text());
+    for (const problem of problems) console.warn('Stations sheet:', problem);
+    state.stations = stations;
+    for (const layer of stationLayers(stations)) {
+      const group = L.layerGroup();
+      // Stations at the very same spot (two repeaters on one mast) share a marker, or only the top one could be tapped.
+      const sites = new Map();
+      for (const station of layer.stations) {
+        const key = `${station.lat},${station.lon}`;
+        if (!sites.has(key)) sites.set(key, []);
+        sites.get(key).push(station);
+      }
+      for (const here of sites.values()) {
+        const marker = L.marker([here[0].lat, here[0].lon], { icon: stationIcon(), title: here.map(stationLabel).join(' / '), keyboard: true });
+        marker.on('click', () => {
+          // Sized to the map as it is now, and kept clear of the buttons in its corners; long details scroll.
+          const size = map.getSize();
+          L.popup({
+            minWidth: Math.min(220, size.x - 112),
+            maxWidth: Math.min(300, size.x - 112), // the map's width less the zoom buttons and the popup's own edges
+            maxHeight: Math.max(150, size.y - 110),
+            autoPanPaddingTopLeft: [54, 58],
+            autoPanPaddingBottomRight: [10, 26],
+            offset: [0, -10],
+          })
+            .setLatLng(marker.getLatLng())
+            .setContent(sitePopup(here))
+            .openOn(map);
+        });
+        marker.addTo(group);
+      }
+      stationGroups.set(layer.id, group);
+      layersControl.addOverlay(group, layer.name);
+    }
+    showLayers(state.layersWanted);
+    showStationsLine();
+  } catch (error) {
+    // The app works without the sheet; there are just no station layers to switch on.
+    console.warn('Could not load the stations sheet', error);
+  }
+}
+
+map.on('overlayadd overlayremove', () => {
+  state.layersOn = new Set([...stationGroups].filter(([, group]) => map.hasLayer(group)).map(([id]) => id));
+  writeAddress();
+});
+
 // --- page address (so a setup can be shared as a link) -----------------------
 
 function writeAddress() {
   const parts = state.waypoints.map(
     (wp, i) => `${LABELS[i].toLowerCase()}=${wp.lat.toFixed(5)},${wp.lon.toFixed(5)}`,
   );
+  state.waypoints.forEach((wp, i) => {
+    if (wp.station) parts.push(`s${LABELS[i].toLowerCase()}=${encodeURIComponent(wp.station)}`);
+  });
   parts.push(...settingsToAddress(state.settings));
   if (background !== 'map') parts.push(`bg=${background}`);
+  const layers = state.stations.length ? [...state.layersOn] : state.layersWanted;
+  if (layers.length) parts.push(`layers=${layers.map(encodeURIComponent).join(',')}`);
   history.replaceState(null, '', `#${parts.join('&')}`);
 }
 
@@ -281,9 +511,15 @@ function readAddress() {
     const lat = Number(match[1]);
     const lon = Number(match[2]);
     if (Math.abs(lat) > 90 || Math.abs(lon) > 180) break;
-    waypoints.push({ lat, lon });
+    const station = params.get(`s${label.toLowerCase()}`);
+    waypoints.push(station ? { lat, lon, station } : { lat, lon });
   }
-  return { waypoints, settings: settingsFromAddress(params), background: params.get('bg') ?? 'map' };
+  return {
+    waypoints,
+    settings: settingsFromAddress(params),
+    background: params.get('bg') ?? 'map',
+    layers: (params.get('layers') ?? '').split(',').filter(Boolean),
+  };
 }
 
 // --- small helpers -------------------------------------------------------------
@@ -469,6 +705,7 @@ function dataSummary() {
 /** The waypoints changed: forget the old terrain and start over. */
 function pathChanged() {
   syncMarkers();
+  showStationsLine();
   el.swap.disabled = state.waypoints.length < 2;
   el.clear.disabled = state.waypoints.length === 0;
   el.hint.hidden = state.waypoints.length >= 2;
@@ -933,10 +1170,12 @@ window.addEventListener('hashchange', () => {
 
 // --- start -----------------------------------------------------------------------
 
-function start({ waypoints, settings, background: wanted }) {
+function start({ waypoints, settings, background: wanted, layers }) {
   state.waypoints = waypoints;
   state.settings = settings;
   showBackground(wanted);
+  state.layersWanted = layers;
+  showLayers(layers);
   showSettings();
   if (waypoints.length === 2) {
     map.fitBounds(
@@ -953,6 +1192,7 @@ function start({ waypoints, settings, background: wanted }) {
 }
 
 start(readAddress());
+loadStations();
 
 // Handy when testing from the browser's console.
 globalThis.sightline = { state, terrain, map };

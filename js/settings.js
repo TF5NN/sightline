@@ -31,6 +31,7 @@ export const BANDS = {
 export const RADIOS = {
   ht5w: { bands: ['2m', '70cm'], label: 'Handheld, 5 W', powerW: 5, sensitivity: -119 },
   mobile50w: { bands: ['2m', '70cm'], label: 'Mobile or base, 50 W', powerW: 50, sensitivity: -119 },
+  repeater: { bands: ['2m', '70cm'], label: 'Repeater, 25 W', powerW: 25, sensitivity: -119 },
   meshcore: {
     bands: ['lora868'],
     label: 'MeshCore node (EU/UK narrow)',

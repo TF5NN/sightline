@@ -883,3 +883,132 @@ dialog li {
   vertical-align: middle;
   margin-right: 6px;
 }
+
+/* --- Station layers: repeaters and other fixed stations on the map -------------------- */
+
+.station-dot {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--ink);
+  border: 2px solid var(--white);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.35);
+  color: #bce3bc;
+  cursor: pointer;
+}
+
+.station-dot svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.station-popup {
+  font-family: var(--sans);
+  color: var(--ink);
+}
+
+.station-card + .station-card {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.station-popup h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.station-popup p {
+  margin: 4px 0;
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+
+.station-popup .kind {
+  margin-top: 1px;
+  color: var(--muted);
+}
+
+.station-popup .freq {
+  margin: 8px 0;
+  padding: 5px 9px;
+  background: var(--green-soft);
+  border: 1px solid #d5e0d4;
+  border-radius: 6px;
+}
+
+.station-popup .freq p {
+  margin: 3px 0;
+  font: 500 0.84rem var(--mono);
+}
+
+.station-popup .freq .k {
+  font-family: var(--sans);
+}
+
+.station-popup .detail {
+  display: grid;
+  grid-template-columns: 70px 1fr;
+  align-items: baseline;
+}
+
+.station-popup .k {
+  font-size: 0.66rem;
+  font-weight: 650;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--label);
+}
+
+.station-popup .assumed,
+.station-popup .notes {
+  color: var(--muted);
+}
+
+.station-popup .notes {
+  margin-top: 8px;
+}
+
+.station-popup .use {
+  display: flex;
+  gap: 8px;
+  margin: 10px 0 2px;
+}
+
+.station-popup .use button {
+  flex: 1;
+  min-height: 40px;
+  padding: 8px 10px;
+  background: var(--green-dark);
+  border-color: var(--green-dark);
+  color: #f4f9ed;
+}
+
+.station-popup .use button:hover {
+  background: #1d3f32;
+}
+
+.stations-line {
+  margin: 0 0 10px;
+  padding: 9px 11px;
+  font-size: 0.86rem;
+  background: var(--green-soft);
+  border: 1px solid #d5e0d4;
+  border-radius: 7px;
+}
+
+.stations-line span {
+  display: block;
+}
+
+.stations-line span + span {
+  margin-top: 4px;
+}

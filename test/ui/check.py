@@ -383,6 +383,65 @@ def main():
                 check("failed" not in report and "blocked" in report, f"{name}: the batch check finds the hill between the far ends")
                 open(os.path.join(OUT, "batch-report.txt"), "w").write(report)
 
+            # Station layers: off until switched on; a tap shows how to work the repeater; "Use as" fills in that end.
+            page.goto(f"{app}/index.html?terrain={tiles}")
+            page.reload()
+            page.wait_for_function("sightline.state.stations.length > 0", timeout=10000)
+            dots = "document.querySelectorAll('.station-dot').length"
+            check(page.evaluate(dots) == 0, f"{name}: no stations on the map until a layer is switched on")
+            overlay = "document.querySelector('.leaflet-control-layers-overlays input')"
+            check("ÍRA repeaters" in page.evaluate("document.querySelector('.leaflet-control-layers-overlays').textContent"), f"{name}: the ÍRA layer is offered")
+            page.evaluate(f"{overlay}.click()")
+            page.wait_for_function(f"{dots} === 8", timeout=5000)
+            check("layers=ira" in page.url and page.evaluate("sightline.state.stations.length") == 9,
+                  f"{name}: nine ÍRA repeaters show at eight sites, and the layer is kept in the address")
+            page.evaluate("sightline.map.setView([63.97639, -21.635], 11)")
+            page.wait_for_timeout(400)
+            page.locator("#map").scroll_into_view_if_needed()
+            page.locator(".leaflet-marker-icon[title*='TF3RPB']").click()
+            page.wait_for_selector(".station-popup")
+            check(page.locator(".station-card").count() == 2 and "TF3RPI Bláfjöll" in page.inner_text(".station-popup"),
+                  f"{name}: two repeaters on one mast share a marker and both are listed")
+            page.wait_for_timeout(500)  # the map slides to make room for the popup
+            card = page.locator(".station-card").first
+            popup = card.inner_text()
+            flat = " ".join(popup.split()).lower()
+            check("tf3rpb bláfjöll" in flat and "listen 145.650 mhz" in flat and "transmit 145.050 mhz (−0.6)" in flat and "tone 88.5" in flat,
+                  f"{name}: the popup says how to work the repeater")
+            fits = page.evaluate("(() => { const p = document.querySelector('.leaflet-popup').getBoundingClientRect(); const m = document.getElementById('map').getBoundingClientRect(); return p.left >= m.left && p.right <= m.right; })()")
+            check(fits, f"{name}: the popup fits inside the map")
+            check("10 m above ground (assumed)" in " ".join(popup.split()) and "25 W" in popup, f"{name}: assumed figures are marked as assumed")
+            check(card.locator(".use button").count() == 1, f"{name}: with no points yet the station can only become A")
+            card.locator(".use button[data-end='a']").click()
+            page.wait_for_function("sightline.state.waypoints.length === 1", timeout=5000)
+            check("a=63.97639,-21.63500" in page.url and "sa=TF3RPB" in page.url, f"{name}: A sits on the repeater and the link says which")
+            check("A: TF3RPB Bláfjöll · 2 m FM. Listen 145.650 MHz" in page.inner_text("#stations-line"), f"{name}: the station and its frequencies are named under the map")
+            # (No terrain under these real places in the test tiles, so the settings are read directly.)
+            st = page.evaluate("sightline.state.settings")
+            check(st["split"] and st["a"]["radio"] == "repeater" and st["a"]["antenna"] == "collinear" and st["a"]["height"] == 10
+                  and st["b"]["radio"] == "ht5w" and st["b"]["antenna"] == "duck" and st["b"]["height"] == 1.5,
+                  f"{name}: the repeater end is filled in, the other end stays the handheld")
+            # A 70 cm repeater as B switches the band and brings its own antenna.
+            page.evaluate("sightline.map.setView([64.129, -21.9187], 12)")
+            page.wait_for_timeout(400)
+            page.locator("#map").scroll_into_view_if_needed()
+            page.locator(".leaflet-marker-icon[title*='TF3RVK']").click()
+            page.wait_for_selector(".station-popup")
+            check(page.locator(".station-popup .use button").count() == 2, f"{name}: with A placed the station can become A or B")
+            page.click(".station-popup .use button[data-end='b']")
+            page.wait_for_function("sightline.state.waypoints.length === 2", timeout=5000)
+            st = page.evaluate("sightline.state.settings")
+            check(st["band"] == "70cm" and st["b"]["radio"] == "repeater" and st["b"]["antenna"] == "quarter" and "gainB" not in st["overrides"],
+                  f"{name}: Perlan as B switches to 70 cm with its quarter-wave antenna")
+            check("sb=TF3RVK" in page.url and "B: TF3RVK Perlan · 70 cm FM" in page.inner_text("#stations-line"), f"{name}: both stations are named")
+            shared = page.url
+            page.goto("about:blank")
+            page.goto(shared)
+            page.wait_for_function(f"{dots} === 8 && !document.getElementById('stations-line').hidden", timeout=10000)
+            check("A: TF3RPB Bláfjöll" in page.inner_text("#stations-line") and page.evaluate("sightline.state.settings.b.antenna") == "quarter",
+                  f"{name}: a shared link brings back the stations, the layer and the settings")
+            page.screenshot(path=os.path.join(OUT, f"{name}-stations.png"), full_page=True)
+
             # The "how it works" page opens from the app and fits the screen.
             page.goto(url)
             page.wait_for_function(status_is("^Done\\."), timeout=30000)

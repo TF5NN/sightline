@@ -95,6 +95,7 @@ Sentinel-2, CC BY-NC-SA 4.0: free for non-commercial use with credit).
 | `js/terrain.js` | Opens terrain files, fetches and remembers blocks, returns heights |
 | `js/tiles.js` | Where the files live and how they are named. The one place to change if PGC changes its layout |
 | `js/radio.js` | Curvature, Fresnel zone, diffraction, link budget, and where 2 m data is worth fetching. Pure maths |
+| `js/stations.js` | Reads the stations sheet and names the layers |
 | `js/settings.js` | Bands, radios and antennas, and how the choices are kept in the page address (links from before the lists still open) |
 | `js/profile.js` | Samples a path, fills holes, stitches 10 m and 2 m data into one profile |
 | `js/geo.js`, `js/projection.js`, `js/geoid.js` | Distances and bearings, map-grid conversion, sea-level correction. Pure maths |
@@ -124,6 +125,16 @@ python3 test/ui/check.py       # the whole app in headless Chrome (needs: pip in
 The checks read small made-up terrain tiles in `test/tiles/` whose true height
 is known everywhere, so the reader can be compared with the right answer.
 `python3 tools/make_test_tiles.py test/tiles` rebuilds them.
+
+## Station layers
+
+The layers button on the map can show fixed stations, starting with ÍRA's
+repeaters. Tap one to see how to work it, and to use it as point A or B with
+its power, antenna and height filled in. The stations live in one sheet,
+[data/stations.csv](data/stations.csv), which is meant to be edited by hand;
+[data/stations.md](data/stations.md) explains the columns and how to add a
+layer. Where the sheet has no figure the app assumes 25 W, 6 dBi and a 10 m
+mast, and says so.
 
 ## Checking the model against real links
 

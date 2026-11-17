@@ -33,7 +33,7 @@ test('the starting setup is a 2 m, 5 W handheld with a rubber duck, link part cl
 });
 
 test('each band only offers radios and antennas made for it', () => {
-  assert.deepEqual(radiosFor('2m').map(([id]) => id), ['ht5w', 'mobile50w']);
+  assert.deepEqual(radiosFor('2m').map(([id]) => id), ['ht5w', 'mobile50w', 'repeater']);
   assert.deepEqual(radiosFor('lora868').map(([id]) => id), ['meshcore', 'meshtastic']);
   assert.ok(antennasFor('2m').some(([id]) => id === 'yagi3'));
   assert.ok(!antennasFor('70cm').some(([id]) => id === 'yagi3'));
