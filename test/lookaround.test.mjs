@@ -31,13 +31,13 @@ test('the skyline is blended between directions and named by compass point', () 
 
 test('the picture marks stations and point B, and keeps close names apart', () => {
   const marks = [
-    { az: 10, el: 1, label: 'TF3RPA', kind: 'clear' },
-    { az: 12, el: 0.5, label: 'TF1RPE <x>', kind: 'blocked' },
+    { az: 10, el: 1, label: 'TF3RPA', kind: 'good' },
+    { az: 12, el: 0.5, label: 'TF1RPE <x>', kind: 'unlikely' },
     { az: 200, el: 0, label: 'BEHIND', kind: 'marginal' },
     { az: 30, el: 0.2, label: 'B', kind: 'b' },
   ];
   const svg = picture({ yaw: 15, pitch: 12 }, wall, marks);
-  assert.ok(svg.includes('look-clear') && svg.includes('look-blocked') && svg.includes('look-b'));
+  assert.ok(svg.includes('look-good') && svg.includes('look-unlikely') && svg.includes('look-b'));
   assert.ok(!svg.includes('BEHIND'), 'a station behind the viewer is not drawn');
   assert.ok(svg.includes('TF1RPE &lt;x&gt;'), 'names from the sheet are written as text, not markup');
   const heights = [...svg.matchAll(/<text x="[\d.]+" y="([\d.]+)" text-anchor="middle">TF/g)].map((m) => Number(m[1]));

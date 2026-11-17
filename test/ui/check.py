@@ -37,10 +37,12 @@ export async function openTerrain() {
   return {
     covers: async () => true,
     horizon: async () => ({ angles: [6, 1, 0, 2], stepDegrees: 90, groundMetres: 50 }),
-    sight: async ({ to }) => ({
-      distanceMetres: 31000, bearingDegrees: 200, worstAtMetres: 12000, angleDegrees: 1,
-      clearanceMetres: Math.abs(to.lat - 63.97639) < 0.001 ? 120 : Math.abs(to.lat - 64.129) < 0.001 ? -20 : -500,
+    // Stations sit on 500 m hills. Towards Bláfjöll the ground between is flat; towards the rest there is a 6 km wall.
+    profile: async ({ to }) => ({
+      distances: [0, 15500, 31000], ground: [500, Math.abs(to.lat - 63.97639) < 0.001 ? 0 : 6000, 500],
+      distanceMetres: 31000, bearingDegrees: 200,
     }),
+    sight: async () => ({ distanceMetres: 31000, bearingDegrees: 200, worstAtMetres: 12000, angleDegrees: 1, clearanceMetres: 5 }),
   };
 }
 """
@@ -143,7 +145,7 @@ def main():
             page.on("response", lambda r: errors.append(f"{r.status} {r.url}") if r.status >= 400 and r.url.startswith(app) else None)
 
             # The terrain layers for "which stations are in sight" come from another site. Here a
-            # stand-in answers instead: Bláfjöll is in sight, Perlan is marginal, the rest are blocked.
+            # stand-in answers instead: Bláfjöll has a clear path, the rest are behind a wall.
             page.route("**/tf5nn.github.io/terrain/**", lambda route: route.fulfill(
                 content_type="text/javascript", headers={"access-control-allow-origin": "*"}, body=FAKE_LAYERS))
 
@@ -472,14 +474,15 @@ def main():
             page.mouse.click(*spot)
             page.wait_for_function("sightline.sightFromA.results.size === 8", timeout=10000)
             count = lambda kind: page.evaluate(f"document.querySelectorAll('.station-dot.sight-{kind}').length")
-            check((count("clear"), count("marginal"), count("blocked")) == (1, 1, 6) and page.is_visible("#sight-line"),
-                  f"{name}: with A placed, stations are coloured in sight, marginal or blocked, with a key under the map")
+            check((count("good"), count("marginal"), count("unlikely")) == (1, 0, 7) and page.is_visible("#sight-line"),
+                  f"{name}: with A placed, stations are coloured by whether they should work, with a key under the map")
             page.evaluate("sightline.map.setView([63.97639, -21.635], 11, { animate: false })")
             page.wait_for_timeout(400)
-            page.locator(".station-dot.sight-clear").click()
+            page.locator(".station-dot.sight-good").click()
             page.wait_for_selector(".station-popup")
-            check("In sight from A, 31 km away. The line clears the terrain by at least 120 m." in page.inner_text(".station-popup .sight-clear"),
-                  f"{name}: the station's card says what was found")
+            words = page.locator(".station-popup .sight-good").first.inner_text()
+            check(words.startswith("Should work from A: about ") and words.endswith(" dB to spare over 31 km. Clear line of sight."),
+                  f"{name}: the station's card says what was found ({words})")
             page.screenshot(path=os.path.join(OUT, f"{name}-sight.png"), full_page=True)
             page.evaluate("sightline.map.closePopup()")
 

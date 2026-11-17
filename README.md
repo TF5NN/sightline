@@ -72,7 +72,7 @@ Your points and settings stay in the browser and in the page address; the
 terrain requests go straight from your browser to the public ArcticDEM archive.
 With a station layer showing and point A placed in Iceland, or when Look around
 is pressed, a few small terrain files are also fetched from `tf5nn.github.io/terrain` to colour the stations by
-whether A can see them (see "Stations seen from A" below).
+whether A can work them (see "Stations seen from A" below).
 The device's location is asked for only when "My location" is pressed and is
 not sent anywhere.
 
@@ -100,7 +100,7 @@ Sentinel-2, CC BY-NC-SA 4.0: free for non-commercial use with credit).
 | `js/radio.js` | Curvature, Fresnel zone, diffraction, link budget, and where 2 m data is worth fetching. Pure maths |
 | `js/stations.js` | Reads the stations sheet and names the layers |
 | `js/panorama.js`, `js/lookaround.js` | The look-around view: where each direction lands in the picture, and the drawing |
-| `js/sight.js` | Which stations point A can see: opens the shared terrain layers, judges the answer, words it |
+| `js/sight.js` | Which stations point A can work: opens the shared terrain layers, runs the link estimate on a coarse profile, words the answer |
 | `js/settings.js` | Bands, radios and antennas, and how the choices are kept in the page address (links from before the lists still open) |
 | `js/profile.js` | Samples a path, fills holes, stitches 10 m and 2 m data into one profile |
 | `js/geo.js`, `js/projection.js`, `js/geoid.js` | Distances and bearings, map-grid conversion, sea-level correction. Pure maths |
@@ -133,15 +133,23 @@ is known everywhere, so the reader can be compared with the right answer.
 
 ## Stations seen from A
 
-With a station layer showing, placing point A colours each station: green in
-sight, amber marginal, red blocked. It is a first look, worked out from the
-small "highest ground per cell" layers in the
-[terrain](https://github.com/TF5NN/terrain) repository (Iceland only), about
-4 KB per station, not from the full ArcticDEM data. It uses A's antenna height
-and each station's height from the sheet, and is plain geometry: no Fresnel
-zone, no bending over ridges. Marginal means the line is within 40 m of the
-layers' ground and may in truth just clear. Tap a station and use it as B for
-the real profile. `js/sight.js` holds the thresholds and the wording.
+With a station layer showing, placing point A colours each station by a first
+estimate of the radio link to it: green should work (10 dB or more to spare),
+amber marginal (0 to 10 dB), red unlikely. The station's card gives the figure
+and says whether there is a line of sight or the signal has to bend over the
+terrain.
+
+It is the app's own link estimate (`js/radio.js`), with the figures "Use as B"
+on that station would give, run on a coarse profile from the small "highest
+ground per cell" layers in the [terrain](https://github.com/TF5NN/terrain)
+repository instead of the full ArcticDEM data: Iceland only, about 180 KB for
+the eight ÍRA sites from a new spot (plus 155 KB once), against megabytes for
+one full profile. The coarse profile reads a little high, so the estimate errs slightly
+on the careful side. Compared with the same estimate on the 10 m data over 343
+paths at 145 MHz, the margin was 0.6 dB lower in the middle case, 90% of paths
+were within −4 to +1 dB, and 338 fell in the same colour (the other five in the
+one next to it). Tap a station and use it as B for the real profile.
+`js/sight.js` holds the thresholds and the wording.
 
 ## Look around
 
@@ -149,8 +157,8 @@ the real profile. `js/sight.js` holds the thresholds and the wording.
 skyline at A's antenna height, with compass bearings along the horizon. Drag
 it, or use the arrow keys, to turn and tilt. Stations on the layers that are
 showing, and point B, are marked where they stand, in the same colours as on
-the map; a blocked one is drawn behind the ground, so the direction to it is
-still shown. It is drawn from the same small terrain layers as "Stations seen
+the map; one with no line of sight is drawn behind the ground, so the direction
+to it is still shown. It is drawn from the same small terrain layers as "Stations seen
 from A" (Iceland only, about 40 KB), and leaves out buildings, trees and ground
 closer than 100 m. `js/panorama.js` is the maths (shared with Northbound's
 look-around view), `js/lookaround.js` the drawing.

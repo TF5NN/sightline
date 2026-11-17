@@ -52,11 +52,11 @@
         <p id="hint" class="hint">Tap the map to place point A, then point B. Drag a point to move it.</p>
         <p id="stations-line" class="stations-line" hidden></p>
         <p id="sight-line" class="sight-line" hidden>
-          Stations as seen from A:
-          <span><i class="sight-clear"></i>in sight</span>
+          Stations from A, estimated:
+          <span><i class="sight-good"></i>should work</span>
           <span><i class="sight-marginal"></i>marginal</span>
-          <span><i class="sight-blocked"></i>blocked</span>
-          <small>A first look from coarse terrain data. Tap a station and use it as B for the full profile.</small>
+          <span><i class="sight-unlikely"></i>unlikely</span>
+          <small>A first estimate of the radio link from coarse terrain data, with your station at A. Tap a station and use it as B for the full profile.</small>
         </p>
 
         <div id="chart" class="chart" hidden></div>
@@ -218,7 +218,7 @@
       <p class="look-note">
         Drag to look around. This is the terrain's skyline from point A at its antenna height, drawn from coarse
         terrain data (Iceland only). Stations on the layers that are showing, and point B, stand where they are:
-        green in sight, amber marginal, red blocked and drawn behind the ground. Buildings, trees and ground closer
+        green should work, amber marginal, red unlikely. One with no line of sight is drawn behind the ground. Buildings, trees and ground closer
         than 100 m are not included.
       </p>
     </dialog>

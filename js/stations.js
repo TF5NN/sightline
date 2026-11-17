@@ -6,7 +6,7 @@
 // forgiving: commas or semicolons between columns, decimal commas, any column
 // order, and a byte-order mark at the start are all accepted.
 
-import { BANDS } from './settings.js';
+import { ANTENNAS, BANDS, RADIOS, antennasFor, mirrorStations, settingsForBand } from './settings.js';
 
 // The tick-box name for each layer. A layer that is not listed here still
 // works; it is named after the word in the sheet's "layer" column.
@@ -190,6 +190,47 @@ export function stationBand(station) {
     if (!best || distance < best.distance) best = { id, distance };
   }
   return { band: best.id, exact: best.distance < 0.03, frequency };
+}
+
+/**
+ * The settings as they are once one end of the link is put on a station: the band follows the
+ * station, the two ends become different stations, and that end takes the station's power,
+ * antenna gain, cable loss and height. The settings given are left as they were.
+ * @param {object} settings the app's settings (see js/settings.js)
+ * @param {object} station one station from readStations
+ * @param {0 | 1} index 0 for point A, 1 for point B
+ */
+export function settingsWithStation(settings, station, index) {
+  let s = structuredClone(settings);
+  const { band, exact, frequency } = stationBand(station);
+  if (band !== s.band) {
+    const previous = s;
+    s = structuredClone(settingsForBand(band, previous));
+    s.a.height = previous.a.height;
+    s.b.height = previous.b.height;
+  }
+  // From here on the two ends are different stations. The other end starts as whatever both ends were.
+  if (!s.split) s = { ...mirrorStations(s), split: true };
+  const end = index === 0 ? 'a' : 'b';
+  const letter = index === 0 ? 'A' : 'B';
+  if (RADIOS.repeater.bands.includes(band)) s[end].radio = 'repeater';
+  // An antenna from the list if one has this gain; otherwise the collinear, with the gain typed over it.
+  const listed = antennasFor(band).find(([, a]) => a.gain === station.gainDbi);
+  if (listed) s[end].antenna = listed[0];
+  else if (ANTENNAS.collinear.bands.includes(band)) s[end].antenna = 'collinear';
+  s[end].height = station.heightM;
+  const set = (name, value, usual) => {
+    if (value === usual) delete s.overrides[name];
+    else s.overrides[name] = value;
+  };
+  set(`power${letter}`, station.powerW, RADIOS[s[end].radio].powerW);
+  set(`gain${letter}`, station.gainDbi, ANTENNAS[s[end].antenna].gain);
+  set(`cable${letter}`, station.cableDb, 0);
+  delete s.overrides[`sens${letter}`];
+  // A station on a frequency none of the bands is made for: use its own frequency.
+  if (!exact && frequency !== null) s.overrides.freqMHz = frequency;
+  else if (band !== settings.band) delete s.overrides.freqMHz;
+  return s;
 }
 
 /** The layers that have something to show, in the order they first appear: [{ id, name, stations }]. */

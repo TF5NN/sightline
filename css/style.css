@@ -706,7 +706,7 @@ dialog li {
   stroke-width: 2.5px;
 }
 
-.look-clear {
+.look-good {
   color: #2e8b57;
 }
 
@@ -714,7 +714,7 @@ dialog li {
   color: #b87400;
 }
 
-.look-blocked {
+.look-unlikely {
   color: #c0392b;
 }
 
@@ -1033,7 +1033,7 @@ dialog li {
 }
 
 /* Seen from point A: the ring round a station says whether the terrain lets it be seen. */
-.station-dot.sight-clear {
+.station-dot.sight-good {
   background: #2e8b57;
   color: var(--white);
 }
@@ -1043,7 +1043,7 @@ dialog li {
   color: var(--white);
 }
 
-.station-dot.sight-blocked {
+.station-dot.sight-unlikely {
   background: #c0392b;
   color: var(--white);
 }
@@ -1069,7 +1069,7 @@ dialog li {
   border-radius: 50%;
 }
 
-.sight-line i.sight-clear {
+.sight-line i.sight-good {
   background: #2e8b57;
 }
 
@@ -1077,7 +1077,7 @@ dialog li {
   background: #d98a00;
 }
 
-.sight-line i.sight-blocked {
+.sight-line i.sight-unlikely {
   background: #c0392b;
 }
 
@@ -1093,7 +1093,7 @@ dialog li {
   background: var(--green-soft);
 }
 
-.station-popup .sight.sight-clear {
+.station-popup .sight.sight-good {
   border-left-color: #2e8b57;
 }
 
@@ -1101,7 +1101,7 @@ dialog li {
   border-left-color: #d98a00;
 }
 
-.station-popup .sight.sight-blocked {
+.station-popup .sight.sight-unlikely {
   border-left-color: #c0392b;
 }
 

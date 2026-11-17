@@ -15,7 +15,7 @@ const ring = (el) => Array.from({ length: 121 }, (_, i) => ({ az: i * 3, el }));
 const CARDINAL = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 
 /**
- * @typedef {{ az: number, el: number, label: string, kind: 'clear' | 'marginal' | 'blocked' | 'b' }} Mark
+ * @typedef {{ az: number, el: number, label: string, kind: 'good' | 'marginal' | 'blocked' | 'b' }} Mark
  *   something to point out: a station (coloured by whether A can see it) or point B
  */
 

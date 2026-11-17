@@ -61,10 +61,11 @@ import {
   stationFrequencyParts,
   stationKind,
   stationLabel,
+  settingsWithStation,
   stationLayers,
 } from './stations.js';
 import { createLookAround } from './lookaround.js';
-import { LAYERS_URL, SAME_SPOT, judge, openLayers, sightWords } from './sight.js';
+import { LAYERS_URL, SAME_SPOT, bestOf, estimateLink, estimateWords, openLayers } from './sight.js';
 import { createTerrain } from './terrain.js';
 
 const { L, GeoTIFF, Plotly } = globalThis;
@@ -288,7 +289,7 @@ map.on('click', (event) => {
 const stationGroups = new Map(); // layer id -> the Leaflet group holding its markers
 const stationById = (id) => state.stations.find((s) => s.id.toLowerCase() === String(id).toLowerCase());
 
-/** A station's marker. `verdict` colours it by whether it can be seen from point A: 'clear', 'marginal' or 'blocked'. */
+/** A station's marker. `verdict` colours it by whether it can be worked from point A: 'good', 'marginal' or 'unlikely'. */
 function stationIcon(verdict = '') {
   return L.divIcon({
     className: '',
@@ -336,11 +337,11 @@ function stationCard(station) {
   kind.className = 'kind';
   kind.textContent = [stationKind(station), station.status].filter(Boolean).join(' · ');
   box.append(title, kind);
-  const seen = sightFromA.results.get(siteKey(station));
+  const seen = sightFromA.stations.get(station.id);
   if (seen) {
     const line = document.createElement('p');
-    line.className = `sight sight-${judge(seen.clearanceMetres)}`;
-    line.textContent = sightWords(seen);
+    line.className = `sight sight-${seen.kind}`;
+    line.textContent = estimateWords(seen);
     box.append(line);
   }
 
@@ -389,37 +390,7 @@ function stationCard(station) {
 function useStation(station, index) {
   state.waypoints[index] = { lat: station.lat, lon: station.lon, station: station.id };
 
-  let s = state.settings;
-  const { band, exact, frequency } = stationBand(station);
-  if (band !== s.band) {
-    const previous = s;
-    s = settingsForBand(band, previous);
-    s.a.height = previous.a.height;
-    s.b.height = previous.b.height;
-  }
-  // From here on the two ends are different stations. The other end starts as whatever both ends were.
-  if (!s.split) s = { ...mirrorStations(s), split: true };
-  const end = index === 0 ? 'a' : 'b';
-  const letter = index === 0 ? 'A' : 'B';
-  if (RADIOS.repeater.bands.includes(band)) s[end].radio = 'repeater';
-  // An antenna from the list if one has this gain; otherwise the collinear, with the gain typed over it.
-  const listed = antennasFor(band).find(([, a]) => a.gain === station.gainDbi);
-  if (listed) s[end].antenna = listed[0];
-  else if (ANTENNAS.collinear.bands.includes(band)) s[end].antenna = 'collinear';
-  s[end].height = station.heightM;
-  const set = (name, value, usual) => {
-    if (value === usual) delete s.overrides[name];
-    else s.overrides[name] = value;
-  };
-  set(`power${letter}`, station.powerW, RADIOS[s[end].radio].powerW);
-  set(`gain${letter}`, station.gainDbi, ANTENNAS[s[end].antenna].gain);
-  set(`cable${letter}`, station.cableDb, 0);
-  delete s.overrides[`sens${letter}`];
-  // A station on a frequency none of the bands is made for: use its own frequency.
-  if (!exact && frequency !== null) s.overrides.freqMHz = frequency;
-  else if (band !== state.settings.band) delete s.overrides.freqMHz;
-
-  state.settings = s;
+  state.settings = settingsWithStation(state.settings, station, index);
   showSettings();
   pathChanged();
 }
@@ -451,41 +422,52 @@ const siteKey = (station) => `${station.lat},${station.lon}`;
 const sites = []; // every marker on the station layers: { layer, marker, stations }
 const sightFromA = {
   key: '', // what the results on screen were worked out for
-  results: new Map(), // site key -> what the terrain layers say about the line from A
+  results: new Map(), // site key -> the best link estimate among the stations there
+  stations: new Map(), // station id -> its own link estimate
 };
 
 /**
- * Colour the stations on the layers that are showing by whether they can be seen from point A.
- * Runs again only when A, its antenna height or the layers showing have changed.
+ * The link from A to each station at one site, estimated on a coarse terrain profile.
+ * Gives null when the site is where A is, or when either is outside the terrain layers.
+ */
+async function estimateSite(layers, a, site) {
+  const [station] = site.stations;
+  if (geodesicDistance(a, station) < SAME_SPOT) return null; // A is on this station
+  const profile = await layers.profile({ from: { lat: a.lat, lon: a.lon }, to: { lat: station.lat, lon: station.lon } });
+  if (!profile) return null; // outside Iceland, or at sea
+  return site.stations.map((s) => estimateLink(profile, s, state.settings));
+}
+
+/**
+ * Colour the stations on the layers that are showing by whether they can be worked from point A.
+ * Runs again only when A, the settings or the layers showing have changed.
  */
 async function refreshSight() {
   const a = state.waypoints[0];
   const shown = sites.filter((site) => state.layersOn.has(site.layer));
-  const height = state.settings.a.height;
-  const key = a && shown.length ? `${a.lat},${a.lon},${height},${[...state.layersOn].sort()}` : '';
+  const key = a && shown.length ? `${a.lat},${a.lon},${[...state.layersOn].sort()},${JSON.stringify(state.settings)}` : '';
   if (key === sightFromA.key) return;
   sightFromA.key = key;
   sightFromA.results.clear();
+  sightFromA.stations.clear();
   for (const site of sites) site.marker.setIcon(stationIcon());
   el.sightLine.hidden = true;
   if (!key) return;
   try {
     const layers = await openLayers(layersUrl);
     for (const site of shown) {
-      const [station] = site.stations;
-      if (geodesicDistance(a, station) < SAME_SPOT) continue; // A is on this station
-      // The tallest antenna at the site decides whether the site can be seen.
-      const antennaMetres = Math.max(...site.stations.map((s) => s.heightM));
-      const result = await layers.sight({ from: { lat: a.lat, lon: a.lon, antennaMetres: height }, to: { lat: station.lat, lon: station.lon, antennaMetres } });
+      const estimates = await estimateSite(layers, a, site);
       if (key !== sightFromA.key) return; // A has moved on meanwhile
-      if (!result) continue; // outside Iceland, or at sea
-      sightFromA.results.set(siteKey(station), result);
-      site.marker.setIcon(stationIcon(judge(result.clearanceMetres)));
+      if (!estimates) continue;
+      const best = bestOf(estimates);
+      sightFromA.results.set(siteKey(site.stations[0]), best);
+      site.stations.forEach((station, i) => sightFromA.stations.set(station.id, estimates[i]));
+      site.marker.setIcon(stationIcon(best.kind));
       el.sightLine.hidden = false;
     }
   } catch (error) {
     // The app works without this; the stations just keep their plain look.
-    console.warn('Could not work out which stations are in sight', error);
+    console.warn('Could not estimate which stations can be worked', error);
   }
 }
 
@@ -510,14 +492,13 @@ async function openLookAround() {
     const horizon = await layers.horizon(from);
     const marks = [];
     for (const site of sites.filter((s) => state.layersOn.has(s.layer))) {
-      const [station] = site.stations;
-      if (geodesicDistance(a, station) < SAME_SPOT) continue;
-      const seen = await layers.sight({ from, to: { lat: station.lat, lon: station.lon, antennaMetres: Math.max(...site.stations.map((s) => s.heightM)) } });
-      if (!seen) continue;
+      const estimates = await estimateSite(layers, a, site);
+      if (!estimates) continue;
+      const best = bestOf(estimates);
       const label = [...new Set(site.stations.map((s) => s.callsign || s.name))].join(' / ');
-      marks.push({ az: seen.bearingDegrees, el: seen.angleDegrees, label, kind: judge(seen.clearanceMetres) });
+      marks.push({ az: best.bearingDegrees, el: best.angleDegrees, label, kind: best.kind });
     }
-    let yaw = marks.find((mark) => mark.kind === 'clear')?.az ?? 0;
+    let yaw = marks.find((mark) => mark.kind === 'good')?.az ?? 0;
     if (b && geodesicDistance(a, b) >= SAME_SPOT) {
       const seen = await layers.sight({ from, to: { lat: b.lat, lon: b.lon, antennaMetres: state.settings.b.height } });
       if (seen) {
