@@ -909,6 +909,79 @@ dialog li {
   stroke-linejoin: round;
 }
 
+/* Seen from point A: the ring round a station says whether the terrain lets it be seen. */
+.station-dot.sight-clear {
+  background: #2e8b57;
+  color: var(--white);
+}
+
+.station-dot.sight-marginal {
+  background: #d98a00;
+  color: var(--white);
+}
+
+.station-dot.sight-blocked {
+  background: #c0392b;
+  color: var(--white);
+}
+
+.sight-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+  margin: 0 0 10px;
+  font-size: 0.86rem;
+}
+
+.sight-line span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.sight-line i {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+}
+
+.sight-line i.sight-clear {
+  background: #2e8b57;
+}
+
+.sight-line i.sight-marginal {
+  background: #d98a00;
+}
+
+.sight-line i.sight-blocked {
+  background: #c0392b;
+}
+
+.sight-line small {
+  flex-basis: 100%;
+  color: var(--muted);
+}
+
+.station-popup .sight {
+  margin: 8px 0;
+  padding: 5px 9px;
+  border-left: 3px solid var(--line);
+  background: var(--green-soft);
+}
+
+.station-popup .sight.sight-clear {
+  border-left-color: #2e8b57;
+}
+
+.station-popup .sight.sight-marginal {
+  border-left-color: #d98a00;
+}
+
+.station-popup .sight.sight-blocked {
+  border-left-color: #c0392b;
+}
+
 .station-popup {
   font-family: var(--sans);
   color: var(--ink);

@@ -63,6 +63,7 @@ import {
   stationLabel,
   stationLayers,
 } from './stations.js';
+import { LAYERS_URL, SAME_SPOT, judge, openLayers, sightWords } from './sight.js';
 import { createTerrain } from './terrain.js';
 
 const { L, GeoTIFF, Plotly } = globalThis;
@@ -85,6 +86,7 @@ const $ = (id) => document.getElementById(id);
 const el = {
   hint: $('hint'),
   stationsLine: $('stations-line'),
+  sightLine: $('sight-line'),
   chart: $('chart'),
   readout: $('readout'),
   legend: $('legend'),
@@ -280,10 +282,11 @@ map.on('click', (event) => {
 const stationGroups = new Map(); // layer id -> the Leaflet group holding its markers
 const stationById = (id) => state.stations.find((s) => s.id.toLowerCase() === String(id).toLowerCase());
 
-function stationIcon() {
+/** A station's marker. `verdict` colours it by whether it can be seen from point A: 'clear', 'marginal' or 'blocked'. */
+function stationIcon(verdict = '') {
   return L.divIcon({
     className: '',
-    html: '<div class="station-dot"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v11M8 20l4-11 4 11M9.2 16.5h5.6"/><path d="M8.2 6.8a5.4 5.4 0 0 1 7.6 0M5.6 4.2a9 9 0 0 1 12.8 0"/></svg></div>',
+    html: `<div class="station-dot${verdict ? ` sight-${verdict}` : ''}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v11M8 20l4-11 4 11M9.2 16.5h5.6"/><path d="M8.2 6.8a5.4 5.4 0 0 1 7.6 0M5.6 4.2a9 9 0 0 1 12.8 0"/></svg></div>`,
     iconSize: [28, 28],
     iconAnchor: [14, 14],
     popupAnchor: [0, -12],
@@ -327,6 +330,13 @@ function stationCard(station) {
   kind.className = 'kind';
   kind.textContent = [stationKind(station), station.status].filter(Boolean).join(' · ');
   box.append(title, kind);
+  const seen = sightFromA.results.get(siteKey(station));
+  if (seen) {
+    const line = document.createElement('p');
+    line.className = `sight sight-${judge(seen.clearanceMetres)}`;
+    line.textContent = sightWords(seen);
+    box.append(line);
+  }
 
   const frequencies = stationFrequencyParts(station);
   if (frequencies.length) {
@@ -427,6 +437,52 @@ function showStationsLine() {
   );
 }
 
+// --- which stations can be seen from point A (a first look, Iceland only) ------
+
+// For development and the checks: ?horizon=http://localhost:8082/v1/ reads the terrain layers from another address.
+const layersUrl = new URLSearchParams(location.search).get('horizon') ?? LAYERS_URL;
+const siteKey = (station) => `${station.lat},${station.lon}`;
+const sites = []; // every marker on the station layers: { layer, marker, stations }
+const sightFromA = {
+  key: '', // what the results on screen were worked out for
+  results: new Map(), // site key -> what the terrain layers say about the line from A
+};
+
+/**
+ * Colour the stations on the layers that are showing by whether they can be seen from point A.
+ * Runs again only when A, its antenna height or the layers showing have changed.
+ */
+async function refreshSight() {
+  const a = state.waypoints[0];
+  const shown = sites.filter((site) => state.layersOn.has(site.layer));
+  const height = state.settings.a.height;
+  const key = a && shown.length ? `${a.lat},${a.lon},${height},${[...state.layersOn].sort()}` : '';
+  if (key === sightFromA.key) return;
+  sightFromA.key = key;
+  sightFromA.results.clear();
+  for (const site of sites) site.marker.setIcon(stationIcon());
+  el.sightLine.hidden = true;
+  if (!key) return;
+  try {
+    const layers = await openLayers(layersUrl);
+    for (const site of shown) {
+      const [station] = site.stations;
+      if (geodesicDistance(a, station) < SAME_SPOT) continue; // A is on this station
+      // The tallest antenna at the site decides whether the site can be seen.
+      const antennaMetres = Math.max(...site.stations.map((s) => s.heightM));
+      const result = await layers.sight({ from: { lat: a.lat, lon: a.lon, antennaMetres: height }, to: { lat: station.lat, lon: station.lon, antennaMetres } });
+      if (key !== sightFromA.key) return; // A has moved on meanwhile
+      if (!result) continue; // outside Iceland, or at sea
+      sightFromA.results.set(siteKey(station), result);
+      site.marker.setIcon(stationIcon(judge(result.clearanceMetres)));
+      el.sightLine.hidden = false;
+    }
+  } catch (error) {
+    // The app works without this; the stations just keep their plain look.
+    console.warn('Could not work out which stations are in sight', error);
+  }
+}
+
 /** Switch on the station layers with these ids (once the sheet has loaded). */
 function showLayers(ids) {
   for (const [id, group] of stationGroups) {
@@ -445,13 +501,13 @@ async function loadStations() {
     for (const layer of stationLayers(stations)) {
       const group = L.layerGroup();
       // Stations at the very same spot (two repeaters on one mast) share a marker, or only the top one could be tapped.
-      const sites = new Map();
+      const spots = new Map();
       for (const station of layer.stations) {
-        const key = `${station.lat},${station.lon}`;
-        if (!sites.has(key)) sites.set(key, []);
-        sites.get(key).push(station);
+        const key = siteKey(station);
+        if (!spots.has(key)) spots.set(key, []);
+        spots.get(key).push(station);
       }
-      for (const here of sites.values()) {
+      for (const here of spots.values()) {
         const marker = L.marker([here[0].lat, here[0].lon], { icon: stationIcon(), title: here.map(stationLabel).join(' / '), keyboard: true });
         marker.on('click', () => {
           // Sized to the map as it is now, and kept clear of the buttons in its corners; long details scroll.
@@ -469,6 +525,7 @@ async function loadStations() {
             .openOn(map);
         });
         marker.addTo(group);
+        sites.push({ layer: layer.id, marker, stations: here });
       }
       stationGroups.set(layer.id, group);
       layersControl.addOverlay(group, layer.name);
@@ -484,6 +541,7 @@ async function loadStations() {
 map.on('overlayadd overlayremove', () => {
   state.layersOn = new Set([...stationGroups].filter(([, group]) => map.hasLayer(group)).map(([id]) => id));
   writeAddress();
+  refreshSight();
 });
 
 // --- page address (so a setup can be shared as a link) -----------------------
@@ -723,6 +781,7 @@ function pathChanged() {
 /** Something changed (waypoints or settings): bring the screen up to date. */
 async function update() {
   writeAddress();
+  refreshSight();
   // Anything still downloading for the old situation is no longer wanted.
   state.controller?.abort();
   state.run += 1;
@@ -1195,4 +1254,4 @@ start(readAddress());
 loadStations();
 
 // Handy when testing from the browser's console.
-globalThis.sightline = { state, terrain, map };
+globalThis.sightline = { state, terrain, map, sightFromA };

@@ -32,6 +32,16 @@ FONT_FILES = {
     "plex-400.woff2": "node_modules/@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-400-normal.woff2",
     "plex-500.woff2": "node_modules/@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-500-normal.woff2",
 }
+FAKE_LAYERS = """
+export async function openTerrain() {
+  return {
+    sight: async ({ to }) => ({
+      distanceMetres: 31000, bearingDegrees: 200, worstAtMetres: 12000, angleDegrees: 1,
+      clearanceMetres: Math.abs(to.lat - 63.97639) < 0.001 ? 120 : Math.abs(to.lat - 64.129) < 0.001 ? -20 : -500,
+    }),
+  };
+}
+"""
 FONT_CSS = """
 @font-face { font-family: 'DM Sans'; font-weight: 100 1000; src: url(https://fonts.test/dm-sans.woff2) format('woff2'); }
 @font-face { font-family: 'IBM Plex Mono'; font-weight: 400; src: url(https://fonts.test/plex-400.woff2) format('woff2'); }
@@ -129,6 +139,11 @@ def main():
             # from the internet, which this test machine may not reach.
             page.on("console", lambda m: errors.append(m.text) if m.type == "error" and "Failed to load resource" not in m.text else None)
             page.on("response", lambda r: errors.append(f"{r.status} {r.url}") if r.status >= 400 and r.url.startswith(app) else None)
+
+            # The terrain layers for "which stations are in sight" come from another site. Here a
+            # stand-in answers instead: Bláfjöll is in sight, Perlan is marginal, the rest are blocked.
+            page.route("**/tf5nn.github.io/terrain/**", lambda route: route.fulfill(
+                content_type="text/javascript", headers={"access-control-allow-origin": "*"}, body=FAKE_LAYERS))
 
             url = f"{app}/index.html?terrain={tiles}#a={a['lat']:.5f},{a['lon']:.5f}&b={b['lat']:.5f},{b['lon']:.5f}"
             status_is = lambda pattern: f"/{pattern}/.test(document.getElementById('status').textContent)"
@@ -441,6 +456,33 @@ def main():
             check("A: TF3RPB Bláfjöll" in page.inner_text("#stations-line") and page.evaluate("sightline.state.settings.b.antenna") == "quarter",
                   f"{name}: a shared link brings back the stations, the layer and the settings")
             page.screenshot(path=os.path.join(OUT, f"{name}-stations.png"), full_page=True)
+
+            # Stations seen from A: coloured once A is placed and a layer shows, explained on the card, gone with A.
+            page.goto("about:blank")
+            page.goto(f"{app}/index.html?terrain={tiles}#layers=ira")
+            page.wait_for_function(f"{dots} === 8", timeout=10000)
+            check(page.is_hidden("#sight-line") and page.evaluate("document.querySelectorAll('.station-dot[class*=sight-]').length") == 0,
+                  f"{name}: stations keep their plain look until point A is placed")
+            page.evaluate("sightline.map.setView([64.2, -21.7], 9, { animate: false })")
+            page.wait_for_timeout(400)
+            page.locator("#map").scroll_into_view_if_needed()
+            spot = page.evaluate("(() => { const q = sightline.map.latLngToContainerPoint([64.25, -21.6]); const r = document.getElementById('map').getBoundingClientRect(); return [r.x + q.x, r.y + q.y]; })()")
+            page.mouse.click(*spot)
+            page.wait_for_function("sightline.sightFromA.results.size === 8", timeout=10000)
+            count = lambda kind: page.evaluate(f"document.querySelectorAll('.station-dot.sight-{kind}').length")
+            check((count("clear"), count("marginal"), count("blocked")) == (1, 1, 6) and page.is_visible("#sight-line"),
+                  f"{name}: with A placed, stations are coloured in sight, marginal or blocked, with a key under the map")
+            page.evaluate("sightline.map.setView([63.97639, -21.635], 11, { animate: false })")
+            page.wait_for_timeout(400)
+            page.locator(".station-dot.sight-clear").click()
+            page.wait_for_selector(".station-popup")
+            check("In sight from A, 31 km away. The line clears the terrain by at least 120 m." in page.inner_text(".station-popup .sight-clear"),
+                  f"{name}: the station's card says what was found")
+            page.screenshot(path=os.path.join(OUT, f"{name}-sight.png"), full_page=True)
+            page.evaluate("sightline.map.closePopup()")
+            page.click("#clear")
+            check(page.is_hidden("#sight-line") and page.evaluate("document.querySelectorAll('.station-dot[class*=sight-]').length") == 0,
+                  f"{name}: Clear takes the colours away again")
 
             # The "how it works" page opens from the app and fits the screen.
             page.goto(url)

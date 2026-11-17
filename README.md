@@ -70,6 +70,9 @@ Read the margin as give or take 10 dB.
 
 Your points and settings stay in the browser and in the page address; the
 terrain requests go straight from your browser to the public ArcticDEM archive.
+With a station layer showing and point A placed in Iceland, a few small terrain
+files are also fetched from `tf5nn.github.io/terrain` to colour the stations by
+whether A can see them (see "Stations seen from A" below).
 The device's location is asked for only when "My location" is pressed and is
 not sent anywhere.
 
@@ -96,6 +99,7 @@ Sentinel-2, CC BY-NC-SA 4.0: free for non-commercial use with credit).
 | `js/tiles.js` | Where the files live and how they are named. The one place to change if PGC changes its layout |
 | `js/radio.js` | Curvature, Fresnel zone, diffraction, link budget, and where 2 m data is worth fetching. Pure maths |
 | `js/stations.js` | Reads the stations sheet and names the layers |
+| `js/sight.js` | Which stations point A can see: opens the shared terrain layers, judges the answer, words it |
 | `js/settings.js` | Bands, radios and antennas, and how the choices are kept in the page address (links from before the lists still open) |
 | `js/profile.js` | Samples a path, fills holes, stitches 10 m and 2 m data into one profile |
 | `js/geo.js`, `js/projection.js`, `js/geoid.js` | Distances and bearings, map-grid conversion, sea-level correction. Pure maths |
@@ -125,6 +129,18 @@ python3 test/ui/check.py       # the whole app in headless Chrome (needs: pip in
 The checks read small made-up terrain tiles in `test/tiles/` whose true height
 is known everywhere, so the reader can be compared with the right answer.
 `python3 tools/make_test_tiles.py test/tiles` rebuilds them.
+
+## Stations seen from A
+
+With a station layer showing, placing point A colours each station: green in
+sight, amber marginal, red blocked. It is a first look, worked out from the
+small "highest ground per cell" layers in the
+[terrain](https://github.com/TF5NN/terrain) repository (Iceland only), about
+4 KB per station, not from the full ArcticDEM data. It uses A's antenna height
+and each station's height from the sheet, and is plain geometry: no Fresnel
+zone, no bending over ridges. Marginal means the line is within 40 m of the
+layers' ground and may in truth just clear. Tap a station and use it as B for
+the real profile. `js/sight.js` holds the thresholds and the wording.
 
 ## Station layers
 
