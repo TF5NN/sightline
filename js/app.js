@@ -63,6 +63,7 @@ import {
   stationLabel,
   stationLayers,
 } from './stations.js';
+import { createLookAround } from './lookaround.js';
 import { LAYERS_URL, SAME_SPOT, judge, openLayers, sightWords } from './sight.js';
 import { createTerrain } from './terrain.js';
 
@@ -102,6 +103,11 @@ const el = {
   locate: $('locate'),
   swap: $('swap'),
   clear: $('clear'),
+  look: $('look'),
+  lookDialog: $('look-dialog'),
+  lookView: $('look-view'),
+  lookFacing: $('look-facing'),
+  lookClose: $('look-close'),
   share: $('share'),
   about: $('about'),
   aboutOpen: $('about-open'),
@@ -483,6 +489,55 @@ async function refreshSight() {
   }
 }
 
+// --- look around from point A (Iceland only) -----------------------------------
+
+const lookAround = createLookAround(el.lookView, el.lookFacing);
+
+/** Open the view from A: the skyline, with the stations on the layers that are showing, and point B, marked on it. */
+async function openLookAround() {
+  const [a, b] = state.waypoints;
+  if (!a) return;
+  const words = el.look.textContent;
+  el.look.disabled = true;
+  el.look.textContent = 'Reading terrain…';
+  try {
+    const layers = await openLayers(layersUrl);
+    if (!(await layers.covers(a.lat, a.lon))) {
+      setStatus('Look around works on land in Iceland only, and point A is outside it.', true);
+      return;
+    }
+    const from = { lat: a.lat, lon: a.lon, antennaMetres: state.settings.a.height };
+    const horizon = await layers.horizon(from);
+    const marks = [];
+    for (const site of sites.filter((s) => state.layersOn.has(s.layer))) {
+      const [station] = site.stations;
+      if (geodesicDistance(a, station) < SAME_SPOT) continue;
+      const seen = await layers.sight({ from, to: { lat: station.lat, lon: station.lon, antennaMetres: Math.max(...site.stations.map((s) => s.heightM)) } });
+      if (!seen) continue;
+      const label = [...new Set(site.stations.map((s) => s.callsign || s.name))].join(' / ');
+      marks.push({ az: seen.bearingDegrees, el: seen.angleDegrees, label, kind: judge(seen.clearanceMetres) });
+    }
+    let yaw = marks.find((mark) => mark.kind === 'clear')?.az ?? 0;
+    if (b && geodesicDistance(a, b) >= SAME_SPOT) {
+      const seen = await layers.sight({ from, to: { lat: b.lat, lon: b.lon, antennaMetres: state.settings.b.height } });
+      if (seen) {
+        marks.push({ az: seen.bearingDegrees, el: seen.angleDegrees, label: 'B', kind: 'b' });
+        yaw = seen.bearingDegrees;
+      }
+    }
+    lookAround.show(horizon, marks, yaw);
+    el.lookDialog.showModal();
+  } catch (error) {
+    console.warn('Could not open the look-around view', error);
+    setStatus('The terrain for the look-around view could not be loaded. Check the connection and try again.', true);
+  } finally {
+    el.look.textContent = words;
+    el.look.disabled = state.waypoints.length === 0;
+  }
+}
+el.look.addEventListener('click', openLookAround);
+el.lookClose.addEventListener('click', () => el.lookDialog.close());
+
 /** Switch on the station layers with these ids (once the sheet has loaded). */
 function showLayers(ids) {
   for (const [id, group] of stationGroups) {
@@ -766,6 +821,7 @@ function pathChanged() {
   showStationsLine();
   el.swap.disabled = state.waypoints.length < 2;
   el.clear.disabled = state.waypoints.length === 0;
+  el.look.disabled = state.waypoints.length === 0;
   el.hint.hidden = state.waypoints.length >= 2;
   if (state.waypoints.length === 1) el.hint.textContent = 'Now tap the map to place point B.';
   if (state.waypoints.length === 0) {

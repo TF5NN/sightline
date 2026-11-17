@@ -43,6 +43,7 @@
           <button id="locate" type="button" title="Place a point where you are">My location</button>
           <button id="swap" type="button" disabled>Swap A and B</button>
           <button id="clear" type="button" disabled>Clear</button>
+          <button id="look" type="button" disabled title="See the skyline from point A (Iceland only)">Look around</button>
           <button id="share" type="button" title="Copy a link that opens this path with all its settings">Share</button>
         </div>
       </section>
@@ -208,6 +209,19 @@
          data-goatcounter-click="main-site-from-sightline" data-goatcounter-title="Sightline: TF5NN main site link">More from TF5NN</a>
     </footer>
     </div>
+
+    <dialog id="look-dialog" aria-labelledby="look-title">
+      <button id="look-close" class="dialog-close" type="button" aria-label="Close look around">×</button>
+      <h2 id="look-title">Look around from A</h2>
+      <svg id="look-view" class="look-view" role="img" tabindex="0"></svg>
+      <p id="look-facing" class="look-facing"></p>
+      <p class="look-note">
+        Drag to look around. This is the terrain's skyline from point A at its antenna height, drawn from coarse
+        terrain data (Iceland only). Stations on the layers that are showing, and point B, stand where they are:
+        green in sight, amber marginal, red blocked and drawn behind the ground. Buildings, trees and ground closer
+        than 100 m are not included.
+      </p>
+    </dialog>
 
     <dialog id="about">
       <h2>About Sightline</h2>

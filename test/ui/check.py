@@ -35,6 +35,8 @@ FONT_FILES = {
 FAKE_LAYERS = """
 export async function openTerrain() {
   return {
+    covers: async () => true,
+    horizon: async () => ({ angles: [6, 1, 0, 2], stepDegrees: 90, groundMetres: 50 }),
     sight: async ({ to }) => ({
       distanceMetres: 31000, bearingDegrees: 200, worstAtMetres: 12000, angleDegrees: 1,
       clearanceMetres: Math.abs(to.lat - 63.97639) < 0.001 ? 120 : Math.abs(to.lat - 64.129) < 0.001 ? -20 : -500,
@@ -480,6 +482,22 @@ def main():
                   f"{name}: the station's card says what was found")
             page.screenshot(path=os.path.join(OUT, f"{name}-sight.png"), full_page=True)
             page.evaluate("sightline.map.closePopup()")
+
+            # Look around from A: the skyline with the stations marked on it; arrow keys turn it; Escape closes it.
+            page.click("#look")
+            page.wait_for_selector("#look-dialog[open]")
+            check(page.locator("#look-view .look-ground").count() == 1 and page.locator("#look-view .look-mark").count() >= 1
+                  and page.inner_text("#look-facing").startswith("Looking SSW · 200°"),
+                  f"{name}: Look around opens on the skyline, facing a station that is in sight ({page.inner_text('#look-facing')})")
+            page.focus("#look-view")
+            page.keyboard.press("ArrowRight")
+            page.keyboard.press("ArrowUp")
+            check(page.inner_text("#look-facing") == "Looking SSW · 210° · 17° up", f"{name}: the arrow keys turn and tilt the view")
+            fits = page.evaluate("(() => { const r = document.getElementById('look-dialog').getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth + 1; })()")
+            check(fits, f"{name}: the look-around view fits the screen")
+            page.screenshot(path=os.path.join(OUT, f"{name}-look.png"))
+            page.keyboard.press("Escape")
+            check(page.locator("#look-dialog[open]").count() == 0, f"{name}: Escape closes it")
             page.click("#clear")
             check(page.is_hidden("#sight-line") and page.evaluate("document.querySelectorAll('.station-dot[class*=sight-]').length") == 0,
                   f"{name}: Clear takes the colours away again")

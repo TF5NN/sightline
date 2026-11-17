@@ -70,8 +70,8 @@ Read the margin as give or take 10 dB.
 
 Your points and settings stay in the browser and in the page address; the
 terrain requests go straight from your browser to the public ArcticDEM archive.
-With a station layer showing and point A placed in Iceland, a few small terrain
-files are also fetched from `tf5nn.github.io/terrain` to colour the stations by
+With a station layer showing and point A placed in Iceland, or when Look around
+is pressed, a few small terrain files are also fetched from `tf5nn.github.io/terrain` to colour the stations by
 whether A can see them (see "Stations seen from A" below).
 The device's location is asked for only when "My location" is pressed and is
 not sent anywhere.
@@ -99,6 +99,7 @@ Sentinel-2, CC BY-NC-SA 4.0: free for non-commercial use with credit).
 | `js/tiles.js` | Where the files live and how they are named. The one place to change if PGC changes its layout |
 | `js/radio.js` | Curvature, Fresnel zone, diffraction, link budget, and where 2 m data is worth fetching. Pure maths |
 | `js/stations.js` | Reads the stations sheet and names the layers |
+| `js/panorama.js`, `js/lookaround.js` | The look-around view: where each direction lands in the picture, and the drawing |
 | `js/sight.js` | Which stations point A can see: opens the shared terrain layers, judges the answer, words it |
 | `js/settings.js` | Bands, radios and antennas, and how the choices are kept in the page address (links from before the lists still open) |
 | `js/profile.js` | Samples a path, fills holes, stitches 10 m and 2 m data into one profile |
@@ -141,6 +142,18 @@ and each station's height from the sheet, and is plain geometry: no Fresnel
 zone, no bending over ridges. Marginal means the line is within 40 m of the
 layers' ground and may in truth just clear. Tap a station and use it as B for
 the real profile. `js/sight.js` holds the thresholds and the wording.
+
+## Look around
+
+"Look around", beside Clear, opens the view from point A: the terrain's
+skyline at A's antenna height, with compass bearings along the horizon. Drag
+it, or use the arrow keys, to turn and tilt. Stations on the layers that are
+showing, and point B, are marked where they stand, in the same colours as on
+the map; a blocked one is drawn behind the ground, so the direction to it is
+still shown. It is drawn from the same small terrain layers as "Stations seen
+from A" (Iceland only, about 40 KB), and leaves out buildings, trees and ground
+closer than 100 m. `js/panorama.js` is the maths (shared with Northbound's
+look-around view), `js/lookaround.js` the drawing.
 
 ## Station layers
 

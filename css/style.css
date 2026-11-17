@@ -609,6 +609,129 @@ dialog li {
   font-size: 0.925rem;
 }
 
+/* The look-around view: the skyline from point A with stations and point B marked on it. */
+#look-dialog {
+  width: min(760px, calc(100vw - 24px));
+  max-width: none;
+}
+
+.dialog-close {
+  float: right;
+  min-width: 34px;
+  min-height: 34px;
+  padding: 0;
+  font-size: 1.3rem;
+  line-height: 1;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.look-view {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.look-view:active {
+  cursor: grabbing;
+}
+
+.look-sky {
+  fill: #f4f7f2;
+}
+
+.look-ground {
+  fill: #b9c4b3;
+  stroke: #b9c4b3;
+  stroke-width: 0.4;
+  stroke-linejoin: round;
+}
+
+.look-grid {
+  fill: none;
+  stroke: #d6dfd8;
+  stroke-width: 0.8;
+}
+
+.look-level {
+  fill: none;
+  stroke: #74866e;
+  stroke-width: 0.8;
+}
+
+.look-tick {
+  stroke: #55774a;
+  stroke-width: 0.8;
+}
+
+.look-cardinal {
+  font: 600 10px var(--mono);
+  fill: var(--ink);
+}
+
+.look-bearing {
+  font: 400 6.5px var(--mono);
+  fill: #55774a;
+}
+
+.look-degree {
+  font: 400 6.5px var(--mono);
+  fill: #a0ad97;
+}
+
+.look-mark path {
+  stroke: currentColor;
+  stroke-width: 0.8;
+}
+
+.look-mark circle {
+  fill: currentColor;
+  stroke: var(--white);
+  stroke-width: 1.2;
+}
+
+.look-mark text {
+  font: 500 7px var(--mono);
+  fill: currentColor;
+  paint-order: stroke;
+  stroke: #f4f7f2;
+  stroke-width: 2.5px;
+}
+
+.look-clear {
+  color: #2e8b57;
+}
+
+.look-marginal {
+  color: #b87400;
+}
+
+.look-blocked {
+  color: #c0392b;
+}
+
+.look-b {
+  color: #2f6fb7;
+}
+
+.look-facing {
+  margin: 10px 0 6px;
+  font: 400 0.82rem var(--mono);
+}
+
+.look-note {
+  margin: 0;
+  color: var(--muted);
+}
+
 /* The A and B pins on the map. */
 .pin {
   display: grid;
