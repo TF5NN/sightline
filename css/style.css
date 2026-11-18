@@ -2,21 +2,78 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
 :root {
-  --paper: #f7f8f3;
-  --white: #fff;
+  /* The named shades shared by Northbound, Sightline and Feedpoint. Northbound's docs/STYLE.md
+     says what each is for; this block is a copy of the one at the top of its stylesheet. */
+  /* Ink and text, darkest to lightest */
+  --ink-deep: #142f32;
   --ink: #203b3d;
+  --ink-soft: #34503d;
+  --text-strong: #526d4d;
+  --text: #628359;
+  --text-cool: #67816d;
+  --text-muted: #809078;
   --muted: #76847d;
-  --label: #758375;
-  --line: #dfe5de;
-  --field-line: #d5dfd3;
-  --field: #fafbf6;
-  --green: #267c62;
+  --text-soft: #96a288;
+  --text-faint: #b2bda9;
+  /* Greens */
   --green-dark: #244c3d;
-  --green-soft: #edf2e9;
-  --amber: #b7791f;
-  --red: #c0392b;
+  --green: #267c62;
+  --green-bright: #21806a;
+  --green-mid: #417954;
+  --green-light: #5f9d77;
+  --green-vivid: #60884e;
+  --green-pale: #bce3bc;
+  /* Amber and rust: notes and warnings */
+  --amber-ink: #8a6a2f;
+  --amber-text: #8a7448;
+  --amber-fill: #b3945f;
+  --amber-line: #e0d7bd;
+  --amber-soft: #f7f1df;
+  --amber-wash: #f0ebe0;
+  --rust: #a35d3c;
+  /* Blue: the "other radio" badge */
+  --blue-ink: #647d98;
+  --blue-fill: #8397b1;
+  --blue-soft: #e9edf2;
+  /* Lines, strongest to faintest */
+  --line-accent: #adc5a4;
+  --line-green: #d9e3d0;
+  --line-strong: #d5dfd3;
+  --line: #dfe5de;
+  /* Surfaces, darkest to lightest */
+  --tint-strong: #e2eee0;
+  --tint-grey: #e7ede4;
+  --green-soft: #e8f2e9;
+  --wash: #edf0e7;
+  --tint: #f0f3e9;
+  --paper: #f7f8f3;
+  --surface: #fcfdf8;
+  --white: #fff;
+  /* Drawings: sky plot and look-around view */
+  --ground: #b9c4b3;
+  --grid: #d6dfd8;
+  --sky: #f4f7f2;
+  --sun: #e9b84a;
+  --sun-edge: #c9962a;
+  --moon: #e6e9ee;
+  --moon-edge: #9aa5b1;
+  /* Overlays and shadows */
+  --backdrop: #16332970;
+  --scrim: #1d3e2a80;
+  --shadow-deep: #0a251c30;
+  --shadow: #28422c13;
+  --shadow-soft: #2342230b;
+  --shadow-black: #0006;
   --mono: 'IBM Plex Mono', ui-monospace, monospace;
   --sans: 'DM Sans', Arial, sans-serif;
+  /* Sightline's own: what the link does, on the chart, the map and the station dots */
+  --path: #2f6fb7;
+  --good: #2e8b57;
+  --marginal: #d98a00;
+  --marginal-ink: #b87400;
+  --bad: #c0392b;
+  --bad-line: #eec2bb;
+  --bad-soft: #f8dcd8;
   --edge: 46px; /* space at the left and right of the page */
 }
 
@@ -59,7 +116,7 @@ a:focus-visible,
 input:focus-visible,
 select:focus-visible,
 summary:focus-visible {
-  outline: 2px solid #287c64;
+  outline: 2px solid var(--green);
   outline-offset: 3px;
 }
 
@@ -116,7 +173,7 @@ summary:focus-visible {
   width: 40px;
   border-radius: 11px;
   background: var(--ink);
-  color: #bce3bc;
+  color: var(--green-pale);
 }
 
 .brand-icon svg {
@@ -148,7 +205,7 @@ button.callsign {
   white-space: nowrap;
   padding: 7px 10px;
   min-height: 0;
-  border: 1px solid #cdd9ce;
+  border: 1px solid var(--line-strong);
   border-radius: 4px;
   background: none;
   cursor: pointer;
@@ -213,7 +270,7 @@ button {
   font-weight: 500;
   color: var(--ink);
   background: var(--white);
-  border: 1px solid #d5dfce;
+  border: 1px solid var(--line-green);
   border-radius: 5px;
   padding: 10px 14px; /* big enough for a thumb */
   min-height: 44px;
@@ -221,7 +278,7 @@ button {
 }
 
 button:hover:not(:disabled) {
-  background: #eaf1e5;
+  background: var(--green-soft);
 }
 
 button:disabled {
@@ -233,11 +290,11 @@ button:disabled {
 button.primary {
   background: var(--green-dark);
   border-color: var(--green-dark);
-  color: #f4f9ed;
+  color: var(--tint);
 }
 
 button.primary:hover:not(:disabled) {
-  background: #1d3f32;
+  background: var(--green-dark);
 }
 
 .panel {
@@ -266,7 +323,7 @@ button.primary:hover:not(:disabled) {
   font-weight: 650;
   letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: var(--label);
+  color: var(--muted);
 }
 
 .u {
@@ -285,9 +342,9 @@ button.primary:hover:not(:disabled) {
   font-weight: 400;
   letter-spacing: 0;
   text-transform: none;
-  color: #3d5547;
-  background: var(--field);
-  border: 1px solid var(--field-line);
+  color: var(--ink-soft);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
   border-radius: 5px;
   padding: 9px 10px;
   min-height: 44px;
@@ -298,14 +355,14 @@ button.primary:hover:not(:disabled) {
 }
 
 .fields input:disabled {
-  background: #eef1ea;
+  background: var(--wash);
   color: var(--muted);
 }
 
 .fields input.invalid,
 .bare-controls input.invalid {
-  border-color: var(--amber);
-  background: #fdf6ea;
+  border-color: var(--marginal-ink);
+  background: var(--amber-soft);
 }
 
 .fields {
@@ -396,7 +453,7 @@ button.primary:hover:not(:disabled) {
 }
 
 .key-los {
-  background: #2f6fb7;
+  background: var(--path);
 }
 
 .key-fresnel {
@@ -406,11 +463,11 @@ button.primary:hover:not(:disabled) {
 }
 
 .key-blocked {
-  background: var(--red);
+  background: var(--bad);
 }
 
 .key-grazing {
-  background: #d98a00;
+  background: var(--marginal);
 }
 
 .bare-controls {
@@ -450,7 +507,7 @@ button.primary:hover:not(:disabled) {
 }
 
 .status.problem {
-  color: #8a5a12;
+  color: var(--amber-ink);
   font-weight: 500;
 }
 
@@ -464,8 +521,8 @@ button.primary:hover:not(:disabled) {
 }
 
 .results div {
-  background: var(--green-soft);
-  border: 1px solid #d5e0d4;
+  background: var(--wash);
+  border: 1px solid var(--line-strong);
   border-radius: 7px;
   padding: 9px 11px;
 }
@@ -475,7 +532,7 @@ button.primary:hover:not(:disabled) {
   font-family: var(--mono);
   font-weight: 500;
   font-size: 0.95rem;
-  color: #2d4a3c;
+  color: var(--green-dark);
 }
 
 .verdict-box dd {
@@ -486,18 +543,18 @@ button.primary:hover:not(:disabled) {
 
 .verdict-box.solid,
 .verdict-box.good {
-  background: #d5ecd9;
-  border-color: #b9dcc0;
+  background: var(--tint-strong);
+  border-color: var(--green-pale);
 }
 
 .verdict-box.marginal {
-  background: #fbeedd;
-  border-color: #efd9b6;
+  background: var(--amber-soft);
+  border-color: var(--amber-line);
 }
 
 .verdict-box.unlikely {
-  background: #f8dcd8;
-  border-color: #eec2bb;
+  background: var(--bad-soft);
+  border-color: var(--bad-line);
 }
 
 #link-panel .fields {
@@ -555,10 +612,10 @@ details#advanced summary::before {
   place-items: center;
   width: 22px;
   height: 22px;
-  border: 1px solid var(--field-line);
+  border: 1px solid var(--line-strong);
   border-radius: 4px;
   font: 500 14px var(--mono);
-  color: var(--label);
+  color: var(--muted);
 }
 
 details#advanced[open] summary::before {
@@ -589,7 +646,7 @@ dialog {
   border-radius: 12px;
   padding: 22px;
   color: var(--ink);
-  background: #fdfef9;
+  background: var(--surface);
 }
 
 dialog::backdrop {
@@ -645,30 +702,30 @@ dialog li {
 }
 
 .look-sky {
-  fill: #f4f7f2;
+  fill: var(--sky);
 }
 
 .look-ground {
-  fill: #b9c4b3;
-  stroke: #b9c4b3;
+  fill: var(--ground);
+  stroke: var(--ground);
   stroke-width: 0.4;
   stroke-linejoin: round;
 }
 
 .look-grid {
   fill: none;
-  stroke: #d6dfd8;
+  stroke: var(--grid);
   stroke-width: 0.8;
 }
 
 .look-level {
   fill: none;
-  stroke: #74866e;
+  stroke: var(--text-muted);
   stroke-width: 0.8;
 }
 
 .look-tick {
-  stroke: #55774a;
+  stroke: var(--text);
   stroke-width: 0.8;
 }
 
@@ -679,12 +736,12 @@ dialog li {
 
 .look-bearing {
   font: 400 6.5px var(--mono);
-  fill: #55774a;
+  fill: var(--text);
 }
 
 .look-degree {
   font: 400 6.5px var(--mono);
-  fill: #a0ad97;
+  fill: var(--text-soft);
 }
 
 .look-mark path {
@@ -702,24 +759,24 @@ dialog li {
   font: 500 7px var(--mono);
   fill: currentColor;
   paint-order: stroke;
-  stroke: #f4f7f2;
+  stroke: var(--sky);
   stroke-width: 2.5px;
 }
 
 .look-good {
-  color: #2e8b57;
+  color: var(--good);
 }
 
 .look-marginal {
-  color: #b87400;
+  color: var(--marginal-ink);
 }
 
 .look-unlikely {
-  color: #c0392b;
+  color: var(--bad);
 }
 
 .look-b {
-  color: #2f6fb7;
+  color: var(--path);
 }
 
 .look-facing {
@@ -774,12 +831,12 @@ dialog li {
   font-weight: 600;
   padding: 10px 12px;
   border-radius: 7px;
-  background: var(--green-soft);
+  background: var(--wash);
 }
 
 .report .verdict.bad {
-  background: #fbeedd;
-  color: #7a4b0b;
+  background: var(--amber-soft);
+  color: var(--amber-ink);
 }
 
 /* --- Narrower screens (same steps as Northbound) -------------------------------------- */
@@ -910,9 +967,9 @@ dialog li {
   font: 400 0.85rem var(--mono);
   text-transform: none;
   letter-spacing: 0;
-  color: #3d5547;
-  background: var(--field);
-  border: 1px solid var(--field-line);
+  color: var(--ink-soft);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
   border-radius: 5px;
   padding: 9px 10px;
 }
@@ -970,8 +1027,8 @@ dialog li {
 }
 
 .doc .box {
-  background: var(--green-soft);
-  border: 1px solid #d5e0d4;
+  background: var(--wash);
+  border: 1px solid var(--line-strong);
   border-radius: 7px;
   padding: 12px 14px;
 }
@@ -1018,7 +1075,7 @@ dialog li {
   background: var(--ink);
   border: 2px solid var(--white);
   box-shadow: 0 1px 4px rgb(0 0 0 / 0.35);
-  color: #bce3bc;
+  color: var(--green-pale);
   cursor: pointer;
 }
 
@@ -1034,17 +1091,17 @@ dialog li {
 
 /* Seen from point A: the ring round a station says whether the terrain lets it be seen. */
 .station-dot.sight-good {
-  background: #2e8b57;
+  background: var(--good);
   color: var(--white);
 }
 
 .station-dot.sight-marginal {
-  background: #d98a00;
+  background: var(--marginal);
   color: var(--white);
 }
 
 .station-dot.sight-unlikely {
-  background: #c0392b;
+  background: var(--bad);
   color: var(--white);
 }
 
@@ -1070,15 +1127,15 @@ dialog li {
 }
 
 .sight-line i.sight-good {
-  background: #2e8b57;
+  background: var(--good);
 }
 
 .sight-line i.sight-marginal {
-  background: #d98a00;
+  background: var(--marginal);
 }
 
 .sight-line i.sight-unlikely {
-  background: #c0392b;
+  background: var(--bad);
 }
 
 .sight-line small {
@@ -1090,19 +1147,19 @@ dialog li {
   margin: 8px 0;
   padding: 5px 9px;
   border-left: 3px solid var(--line);
-  background: var(--green-soft);
+  background: var(--wash);
 }
 
 .station-popup .sight.sight-good {
-  border-left-color: #2e8b57;
+  border-left-color: var(--good);
 }
 
 .station-popup .sight.sight-marginal {
-  border-left-color: #d98a00;
+  border-left-color: var(--marginal);
 }
 
 .station-popup .sight.sight-unlikely {
-  border-left-color: #c0392b;
+  border-left-color: var(--bad);
 }
 
 .station-popup {
@@ -1136,8 +1193,8 @@ dialog li {
 .station-popup .freq {
   margin: 8px 0;
   padding: 5px 9px;
-  background: var(--green-soft);
-  border: 1px solid #d5e0d4;
+  background: var(--wash);
+  border: 1px solid var(--line-strong);
   border-radius: 6px;
 }
 
@@ -1161,7 +1218,7 @@ dialog li {
   font-weight: 650;
   letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: var(--label);
+  color: var(--muted);
 }
 
 .station-popup .assumed,
@@ -1185,19 +1242,19 @@ dialog li {
   padding: 8px 10px;
   background: var(--green-dark);
   border-color: var(--green-dark);
-  color: #f4f9ed;
+  color: var(--tint);
 }
 
 .station-popup .use button:hover {
-  background: #1d3f32;
+  background: var(--green-dark);
 }
 
 .stations-line {
   margin: 0 0 10px;
   padding: 9px 11px;
   font-size: 0.86rem;
-  background: var(--green-soft);
-  border: 1px solid #d5e0d4;
+  background: var(--wash);
+  border: 1px solid var(--line-strong);
   border-radius: 7px;
 }
 
