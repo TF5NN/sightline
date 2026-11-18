@@ -172,6 +172,11 @@ on that station would give, run on a quick profile from the layers in the
 [terrain](https://github.com/TF5NN/terrain) repository instead of the full
 ArcticDEM data. Iceland only.
 
+> On the branch `detail-near` only, and only together with the terrain
+> repository's branch of the same name. On `main` the quick profile reads the
+> 40 m layer near the ends and leaves out the nearest 100 m. See the note at the
+> top of `docs/terrain-layers.md`.
+
 The quick profile is the 10 m data itself within 2 km of each end, counting
 the ground from 10 m out, and a 100 m "highest ground per cell" layer between.
 The ends matter most: on a summit, the plateau around the antenna is what gets

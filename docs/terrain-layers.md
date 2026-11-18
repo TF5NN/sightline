@@ -1,5 +1,13 @@
 # Using the terrain layers in Sightline: what was measured
 
+> **This copy is on the branch `detail-near`, which is not merged.** Section 5
+> describes a change to the quick station estimate that was built and measured
+> and then set aside: Sightline on `main` keeps the estimate as it was. The
+> branch is kept, together with the branch of the same name in the terrain
+> repository, because the work may be wanted one day for a version that runs
+> without a connection, where the 2 m data cannot be fetched and the 10 m layer
+> would be the finest there is. See "Status" in section 5.
+
 Sightline reads ArcticDEM directly. The [terrain](https://github.com/TF5NN/terrain)
 repository holds small layers of the same data for Iceland, first made for
 Northbound's horizon. This page records the measurements made on 17 and 18
@@ -9,10 +17,12 @@ mistakes changed the conclusions.
 
 Short version:
 
-- **Station colours** come from the app's own link estimate run on a quick
-  profile from the layers: the 10 m data near each end, a coarse layer
-  between. Against the same estimate on 10 m data all the way: 0.1 dB off in
-  the middle case and 3.6 dB at worst on 25 paths (section 5).
+- **Station colours** come from the app's own link estimate run on a coarse
+  profile from the layers. Against the same estimate on the 10 m data: the
+  same colour on 338 of 343 paths, the other five one colour off. A sharper
+  version, reading the 10 m data near each end, was built and measured
+  (0.1 dB off in the middle case, 3.6 dB at worst on 25 paths) and is kept on
+  this branch, not merged (section 5).
 - **The first draft of a profile** in Iceland is read from a copy of the 10 m
   data in the terrain repository. On five real paths the final answer was the
   same to 0.01 dB for about a tenth of the draft download.
@@ -76,7 +86,7 @@ antenna to a 25 W repeater with 6 dBi, both receivers −119 dBm):
 
 The colours are: 10 dB or more to spare, 0 to 10 dB, below 0 dB.
 
-**Its weakness, since fixed (section 5).** As first built, the estimate left
+**Its weakness (a fix is on this branch, section 5).** The estimate leaves
 out the ground within 100 m of each end, and so did the comparison above, so
 the comparison could not see this. On the live site, from the summit of Þverfellshorn to Bláfjöll with a
 handheld at 1.5 m, the first estimate said +24 dB and the full profile +15 dB:
@@ -230,7 +240,22 @@ ways from `tf5nn.github.io`, everything over the network:
 
 ---
 
-## 5. The 10 m data close in (built, 18 November 2026)
+## 5. The 10 m data close in (measured 18 November 2026; kept on a branch)
+
+**Status.**
+
+- **The station estimate** below: built, measured, **not merged**. It needs
+  two branches together: `detail-near` in the terrain repository, where
+  `profile()` reads the 10 m data within 2 km of each end from 10 m out, and
+  `detail-near` here, which only updates comments and documents (Sightline's
+  code is the same; it calls `profile()` either way). Publishing the terrain
+  branch is what would switch it on. On `main`, the estimate still reads the
+  40 m layer near the ends and leaves out the nearest 100 m, and the full
+  profile reads 2 m data near the antennas as it always has.
+- **The horizon** below: built as an option in the terrain repository
+  (`horizon({ closeDetail: true })`, branch `horizon-close-detail`), off by
+  default. Northbound asks for it; Sightline's Look around does not, and keeps
+  the horizon it had.
 
 **Question.** Once the terrain repository held the 10 m data, should the
 quick uses of the layers (the station estimate, the Look around horizon) read
@@ -249,7 +274,7 @@ Distance of each variant from it:
 | As it was: 40 m layer near the ends, from 100 m | 2.0 dB      | 14.9 dB | 24 of 25    |
 | 10 m for the first 500 m, from 100 m            | 1.7 dB      | 13.6 dB |             |
 | 10 m for the first 500 m, from 10 m             | 0.4 dB      | 8.0 dB  |             |
-| 10 m for the first 2 km, from 10 m (built)      | 0.1 dB      | 3.6 dB  | 25 of 25    |
+| 10 m for the first 2 km, from 10 m (the branch) | 0.1 dB      | 3.6 dB  | 25 of 25    |
 
 - **Counting the ground closer than 100 m is what matters most.** With the
   40 m "highest ground" cells it had to be left out, because they put up walls
@@ -277,8 +302,8 @@ seven test spots (95% of directions within):
 | Vífilsfell, steep slope | 3.64°           | 2.27°         | 2.27°        | 2.27°        |
 
 - **Only the closest 500 m matters for the horizon**; reading the 10 m data
-  further out changed nothing. So the horizon uses it to 500 m and keeps the
-  40 m layer from there to 2 km.
+  further out changed nothing. So `closeDetail` uses it to 500 m and keeps
+  the 40 m layer from there to 2 km.
 - **The viewer's own ground height must come from the 10 m data too.** The
   first try took the near terrain from the 10 m data but the viewer's height
   from the 40 m layer, which on a slope reads several metres high, and the
@@ -289,8 +314,8 @@ seven test spots (95% of directions within):
   for the 40 m layer and has not been re-measured.
 - **Cost:** one horizon went from about 30–50 KB to 60–110 KB.
 
-Both changes are in the terrain repository's `horizon()` and `profile()`, so
-Northbound's terrain check and Look around have the better horizon too.
+The station estimate's change is in the terrain repository's `profile()` on
+the branch `detail-near`; the horizon's is the `closeDetail` option.
 
 ---
 

@@ -4,6 +4,7 @@
 // terrain check also uses (github.com/TF5NN/terrain). They are loaded only
 // when a station layer is showing and point A is placed, or for Look around.
 //
+// (Branch detail-near, with the terrain repository's branch of the same name:)
 // The quick profile is the 10 m data itself within 2 km of each end, counted
 // from 10 m out, because a link is decided near the antennas more often than
 // anywhere else. Between, it is a 100 m "highest ground per cell" layer, which
