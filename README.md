@@ -155,6 +155,10 @@ filled from ArcticDEM's 32 m layer as before.
 To compare the two sources, add `?draft=arcticdem` to the page address: the
 draft is then read from ArcticDEM even in Iceland.
 
+The measurements behind this and behind the station colours, including the
+alternatives that were measured and not built, are in
+[`docs/terrain-layers.md`](docs/terrain-layers.md).
+
 ## Stations seen from A
 
 With a station layer showing, placing point A colours each station by a first
