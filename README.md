@@ -105,6 +105,7 @@ Sentinel-2, CC BY-NC-SA 4.0: free for non-commercial use with credit).
 | `js/profile.js` | Samples a path, fills holes, stitches 10 m and 2 m data into one profile |
 | `js/geo.js`, `js/projection.js`, `js/geoid.js` | Distances and bearings, map-grid conversion, sea-level correction. Pure maths |
 | `js/chart.js` | The profile chart |
+| `js/theme.js` | Light or dark: applies the theme before the first paint, and runs the header button |
 | `step0.html`, `js/step0.js` | Data connection test: can this browser read the real files, and how are they laid out? |
 | `vendor/` | Copies of Leaflet 1.9.4, geotiff.js 3.0.5 and Plotly basic 4.3.0 |
 | `tools/` | Scripts that generate the sea-level table and the test tiles |
@@ -162,6 +163,20 @@ to it is still shown. It is drawn from the same small terrain layers as "Station
 from A" (Iceland only, about 40 KB), and leaves out buildings, trees and ground
 closer than 100 m. `js/panorama.js` is the maths (shared with Northbound's
 look-around view), `js/lookaround.js` the drawing.
+
+## Light and dark
+
+The page follows the device's light or dark setting. The sun or moon button at
+the end of the header switches it; that choice is remembered in the browser
+(as `tf5nn-theme`, shared with Northbound and Feedpoint, so it carries between
+the apps) and from then on wins over the device. `js/theme.js` does this, loaded
+in the head of every page so the theme is set before the first paint.
+
+Dark mode is made by giving each named shade at the top of `css/style.css` a
+second value, a copy of Northbound's (its `docs/STYLE.md` is the style guide for
+all three apps), plus dark values for Sightline's own seven. The chart reads
+its colours from those shades each time it is drawn, and the lines on the map
+take theirs from the stylesheet. The map pictures are dimmed, not replaced.
 
 ## Station layers
 

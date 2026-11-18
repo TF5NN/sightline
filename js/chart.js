@@ -6,12 +6,21 @@
 // and the page is told which sample is under it. On a touch screen the line
 // stays where the finger left it.
 
-const INK = '#203b3d';
-const LINE = '#dfe5de';
-const GREEN = '#267c62';
-const BLUE = '#2f6fb7';
-const RED = '#c0392b';
-const AMBER = '#d98a00';
+// The chart's colours are the page's named shades (css/style.css), read each time it is drawn so
+// that it follows the light or dark theme. The values here are used where there is no page.
+const FALLBACK = { ink: '#203b3d', line: '#dfe5de', green: '#267c62', path: '#2f6fb7', bad: '#c0392b', marginal: '#d98a00' };
+
+/** A named shade as the page has it now: "#rrggbb". */
+function shade(name) {
+  const value = typeof document === 'undefined' ? '' : getComputedStyle(document.documentElement).getPropertyValue(`--${name}`).trim();
+  return /^#[0-9a-f]{6}$/i.test(value) ? value : FALLBACK[name];
+}
+
+/** The same shade, see-through: "rgba(r,g,b,alpha)". */
+function wash(name, alpha) {
+  const hex = shade(name);
+  return `rgba(${parseInt(hex.slice(1, 3), 16)},${parseInt(hex.slice(3, 5), 16)},${parseInt(hex.slice(5, 7), 16)},${alpha})`;
+}
 
 /** Narrow charts (phones) get tighter margins and no title on the height axis. */
 export const isCompact = (element) => element.clientWidth > 0 && element.clientWidth < 520;
@@ -70,9 +79,9 @@ export function drawProfile(Plotly, element, view, { onHover, onLeave } = {}) {
       x: view.km,
       y: terrain,
       mode: 'lines',
-      line: { color: GREEN, width: 1.5 },
+      line: { color: shade('green'), width: 1.5 },
       fill: 'tonexty',
-      fillcolor: 'rgba(38,124,98,0.16)',
+      fillcolor: wash('green', 0.16),
       connectgaps: false,
       ...quiet,
     },
@@ -102,23 +111,23 @@ export function drawProfile(Plotly, element, view, { onHover, onLeave } = {}) {
         sixty[i] = view.los[i] - 0.6 * view.fresnel[i];
       }
       traces.push(
-        { x: view.km, y: lower, mode: 'lines', line: { color: 'rgba(47,111,183,0.45)', width: 1 }, ...quiet },
+        { x: view.km, y: lower, mode: 'lines', line: { color: wash('path', 0.45), width: 1 }, ...quiet },
         {
           x: view.km,
           y: upper,
           mode: 'lines',
-          line: { color: 'rgba(47,111,183,0.45)', width: 1 },
+          line: { color: wash('path', 0.45), width: 1 },
           fill: 'tonexty',
-          fillcolor: 'rgba(47,111,183,0.13)',
+          fillcolor: wash('path', 0.13),
           ...quiet,
         },
-        { x: view.km, y: sixty, mode: 'lines', line: { color: 'rgba(47,111,183,0.6)', width: 1, dash: 'dot' }, ...quiet },
+        { x: view.km, y: sixty, mode: 'lines', line: { color: wash('path', 0.6), width: 1, dash: 'dot' }, ...quiet },
       );
     }
     traces.push(
-      { x: view.km, y: Array.from(view.los), mode: 'lines', line: { color: BLUE, width: 1.75 }, ...quiet },
-      { x: view.km, y: grazing, mode: 'lines', line: { color: AMBER, width: 3.5 }, connectgaps: false, ...quiet },
-      { x: view.km, y: blocked, mode: 'lines', line: { color: RED, width: 3.5 }, connectgaps: false, ...quiet },
+      { x: view.km, y: Array.from(view.los), mode: 'lines', line: { color: shade('path'), width: 1.75 }, ...quiet },
+      { x: view.km, y: grazing, mode: 'lines', line: { color: shade('marginal'), width: 3.5 }, connectgaps: false, ...quiet },
+      { x: view.km, y: blocked, mode: 'lines', line: { color: shade('bad'), width: 3.5 }, connectgaps: false, ...quiet },
     );
     if (view.masts) {
       const end = view.km[n - 1];
@@ -126,7 +135,7 @@ export function drawProfile(Plotly, element, view, { onHover, onLeave } = {}) {
         x: [0, 0, null, end, end],
         y: [view.masts.baseA, view.masts.tipA, null, view.masts.baseB, view.masts.tipB],
         mode: 'lines',
-        line: { color: INK, width: 3 },
+        line: { color: shade('ink'), width: 3 },
         ...quiet,
       });
     }
@@ -137,8 +146,8 @@ export function drawProfile(Plotly, element, view, { onHover, onLeave } = {}) {
         text: view.edges.map((e) => `−${e.loss.toFixed(0)} dB`),
         mode: 'markers+text',
         textposition: 'top center',
-        textfont: { size: 11, color: INK },
-        marker: { symbol: 'triangle-down', size: 9, color: INK },
+        textfont: { size: 11, color: shade('ink') },
+        marker: { symbol: 'triangle-down', size: 9, color: shade('ink') },
         cliponaxis: false,
         ...quiet,
       });
@@ -150,13 +159,13 @@ export function drawProfile(Plotly, element, view, { onHover, onLeave } = {}) {
     margin: compact ? { l: 38, r: 6, t: 16, b: 36 } : { l: 54, r: 12, t: 18, b: 42 },
     paper_bgcolor: 'rgba(0,0,0,0)',
     plot_bgcolor: 'rgba(0,0,0,0)',
-    font: { family: "'DM Sans', Arial, sans-serif", size: compact ? 11 : 12, color: INK },
+    font: { family: "'DM Sans', Arial, sans-serif", size: compact ? 11 : 12, color: shade('ink') },
     hovermode: false,
     dragmode: false,
     xaxis: {
       title: { text: 'Distance from A (km)', standoff: compact ? 6 : 10 },
       range: [0, view.km[n - 1]],
-      gridcolor: LINE,
+      gridcolor: shade('line'),
       zeroline: false,
       fixedrange: true,
       nticks: compact ? 6 : 12,
@@ -164,7 +173,7 @@ export function drawProfile(Plotly, element, view, { onHover, onLeave } = {}) {
     yaxis: {
       title: compact ? undefined : { text: 'Height (m)' },
       range: [floor, ceiling + pad],
-      gridcolor: LINE,
+      gridcolor: shade('line'),
       zeroline: false,
       fixedrange: true,
       nticks: compact ? 6 : 8,

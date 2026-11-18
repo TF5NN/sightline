@@ -183,13 +183,14 @@ map.on('baselayerchange', (event) => {
 const markers = [];
 // A white edge under the path keeps it readable on the satellite picture.
 const pathEdge = L.polyline([], { color: '#ffffff', weight: 6, opacity: 0.75, interactive: false }).addTo(map);
-const pathLine = L.polyline([], { color: '#2f6fb7', weight: 3, opacity: 0.9 }).addTo(map);
+const pathLine = L.polyline([], { color: '#2f6fb7', className: 'map-path', weight: 3, opacity: 0.9 }).addTo(map);
 const problemLines = L.layerGroup().addTo(map);
 const hoverDot = L.circleMarker([0, 0], {
   radius: 6,
   color: '#ffffff',
   weight: 2,
   fillColor: '#203b3d',
+  className: 'map-hover',
   fillOpacity: 1,
   interactive: false,
 });
@@ -232,6 +233,7 @@ function drawProblemsOnMap(track, status, showGrazing) {
     if (current && current.points.length > 1) {
       L.polyline(current.points, {
         color: current.kind === STATUS_BLOCKED ? '#c0392b' : '#d98a00',
+        className: current.kind === STATUS_BLOCKED ? 'map-bad' : 'map-marginal',
         weight: 6,
         opacity: 0.95,
         interactive: false,
@@ -1291,4 +1293,9 @@ start(readAddress());
 loadStations();
 
 // Handy when testing from the browser's console.
+// The chart takes its colours in script, so it is drawn again when the theme changes.
+document.addEventListener('themechange', () => {
+  if (state.shown) render();
+});
+
 globalThis.sightline = { state, terrain, map, sightFromA };

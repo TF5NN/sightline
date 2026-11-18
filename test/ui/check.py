@@ -505,6 +505,25 @@ def main():
             check(page.is_hidden("#sight-line") and page.evaluate("document.querySelectorAll('.station-dot[class*=sight-]').length") == 0,
                   f"{name}: Clear takes the colours away again")
 
+            # Light and dark: follows the device (light here); the header button switches, redraws the chart and is remembered.
+            page.goto(url)
+            page.wait_for_function(status_is("^Done\\."), timeout=30000)
+            theme = "document.documentElement.dataset.theme"
+            axis = "getComputedStyle(document.querySelector('#chart .xtick text')).fill"
+            light_axis = page.evaluate(axis)
+            check(page.evaluate(theme) == "light" and page.get_attribute(".theme-toggle", "aria-label") == "Switch to the dark theme",
+                  f"{name}: the page opens in the device's theme, with a button to switch")
+            page.click(".theme-toggle")
+            page.wait_for_function(f"{axis} !== '{light_axis}'", timeout=5000)
+            check(page.evaluate(theme) == "dark" and page.evaluate("localStorage.getItem('tf5nn-theme')") == "dark"
+                  and page.evaluate("getComputedStyle(document.body).backgroundColor") == "rgb(15, 25, 23)",
+                  f"{name}: the button turns the page dark, redraws the chart and remembers the choice")
+            page.screenshot(path=os.path.join(OUT, f"{name}-dark.png"), full_page=True)
+            page.goto(f"{app}/how.html")
+            check(page.evaluate(theme) == "dark", f"{name}: the other pages follow the remembered choice")
+            page.click(".theme-toggle")
+            check(page.evaluate(theme) == "light", f"{name}: and the button there switches back")
+
             # The "how it works" page opens from the app and fits the screen.
             page.goto(url)
             page.wait_for_function(status_is("^Done\\."), timeout=30000)
