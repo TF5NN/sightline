@@ -66,6 +66,7 @@ import {
 } from './stations.js';
 import { createLookAround } from './lookaround.js';
 import { LAYERS_URL, SAME_SPOT, bestOf, estimateLink, estimateWords, openLayers } from './sight.js';
+import { ownDraft } from './owndraft.js';
 import { createTerrain } from './terrain.js';
 
 const { L, GeoTIFF, Plotly } = globalThis;
@@ -420,6 +421,8 @@ function showStationsLine() {
 
 // For development and the checks: ?horizon=http://localhost:8082/v1/ reads the terrain layers from another address.
 const layersUrl = new URLSearchParams(location.search).get('horizon') ?? LAYERS_URL;
+// For comparing the two sources of the draft: ?draft=arcticdem reads it from ArcticDEM even in Iceland.
+const draftSource = new URLSearchParams(location.search).get('draft');
 const siteKey = (station) => `${station.lat},${station.lon}`;
 const sites = []; // every marker on the station layers: { layer, marker, stations }
 const sightFromA = {
@@ -846,7 +849,18 @@ async function update() {
     // 1. Draft from the 10 m layer (only when the path itself changed).
     if (!state.draft) {
       setStatus('Reading the 10 m draft…');
-      const draft = await buildProfile({
+      // In Iceland the draft comes from the shared terrain layers: the same 10 m data in much
+      // smaller pieces. Anywhere else, or if they cannot be reached, it is read from ArcticDEM.
+      let draft = null;
+      if (draftSource !== 'arcticdem') {
+        try {
+          draft = await ownDraft({ layers: await openLayers(layersUrl), a, b, maxSamples: DRAFT_MAX_SAMPLES });
+        } catch (error) {
+          console.warn('The terrain layers could not give the draft; reading ArcticDEM instead', error);
+        }
+        if (!stillCurrent()) return;
+      }
+      draft ??= await buildProfile({
         terrain,
         a,
         b,
