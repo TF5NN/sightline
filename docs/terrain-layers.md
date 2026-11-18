@@ -9,9 +9,10 @@ mistakes changed the conclusions.
 
 Short version:
 
-- **Station colours** come from the app's own link estimate run on a coarse
-  profile from the layers. Against the same estimate on the 10 m data: the
-  same colour on 338 of 343 paths, the other five one colour off.
+- **Station colours** come from the app's own link estimate run on a quick
+  profile from the layers: the 10 m data near each end, a coarse layer
+  between. Against the same estimate on 10 m data all the way: 0.1 dB off in
+  the middle case and 3.6 dB at worst on 25 paths (section 5).
 - **The first draft of a profile** in Iceland is read from a copy of the 10 m
   data in the terrain repository. On five real paths the final answer was the
   same to 0.01 dB for about a tenth of the draft download.
@@ -75,13 +76,12 @@ antenna to a 25 W repeater with 6 dBi, both receivers −119 dBm):
 
 The colours are: 10 dB or more to spare, 0 to 10 dB, below 0 dB.
 
-**Its known weakness.** The estimate leaves out the ground within 100 m of
-each end, and so did the comparison above, so the comparison could not see
-this. On the live site, from the summit of Þverfellshorn to Bláfjöll with a
+**Its weakness, since fixed (section 5).** As first built, the estimate left
+out the ground within 100 m of each end, and so did the comparison above, so
+the comparison could not see this. On the live site, from the summit of Þverfellshorn to Bláfjöll with a
 handheld at 1.5 m, the first estimate said +24 dB and the full profile +15 dB:
 the same colour, but 9 dB too generous, because the plateau around the antenna
-is what gets in the way and only the 2 m data sees it. On a hilltop or ridge
-edge with a low antenna, treat the first estimate as generous.
+is what gets in the way.
 
 **Cost, measured.** One path on its own fetches 10–85 KB depending on length.
 The eight ÍRA sites from one new spot came to about 180 KB, plus 155 KB once
@@ -230,7 +230,71 @@ ways from `tf5nn.github.io`, everything over the network:
 
 ---
 
-## 5. What went wrong on the way
+## 5. The 10 m data close in (built, 18 November 2026)
+
+**Question.** Once the terrain repository held the 10 m data, should the
+quick uses of the layers (the station estimate, the Look around horizon) read
+it for the nearest ground, and how far out?
+
+### The station estimate
+
+Five spots chosen to be awkward (the summit of Þverfellshorn, Úlfarsfell
+hilltop, a steep slope on Vífilsfell, the foot of Esja, a street in
+Reykjavík), each to five repeaters: 25 paths. "Truth" here is the app's link
+estimate on the 10 m data all the way, counting the ground from 10 m out.
+Distance of each variant from it:
+
+| Quick profile                                   | Middle case | Worst   | Same colour |
+| ----------------------------------------------- | ----------- | ------- | ----------- |
+| As it was: 40 m layer near the ends, from 100 m | 2.0 dB      | 14.9 dB | 24 of 25    |
+| 10 m for the first 500 m, from 100 m            | 1.7 dB      | 13.6 dB |             |
+| 10 m for the first 500 m, from 10 m             | 0.4 dB      | 8.0 dB  |             |
+| 10 m for the first 2 km, from 10 m (built)      | 0.1 dB      | 3.6 dB  | 25 of 25    |
+
+- **Counting the ground closer than 100 m is what matters most.** With the
+  40 m "highest ground" cells it had to be left out, because they put up walls
+  that are not there. With the 10 m data it can be counted.
+- **2 km at each end, not just the closest.** 500 m left an 8 dB error.
+- The case that started this, Þverfellshorn summit to Bláfjöll: the quick
+  estimate was +23.9 dB, is now +15.3 dB, and the full profile with 2 m data on
+  the live site gave +15.0 dB.
+- **Cost:** the nine ÍRA repeaters from a new spot went from about 180 KB to
+  400–470 KB.
+
+### The horizon
+
+Against horizons computed from the 10 m mosaic at the terrain repository's
+seven test spots (95% of directions within):
+
+| Spot                    | 40 m layer only | 10 m to 500 m | 10 m to 1 km | 10 m to 2 km |
+| ----------------------- | --------------- | ------------- | ------------ | ------------ |
+| Öskjuhlíð hill          | 0.37°           | 0.37°         | 0.37°        | 0.37°        |
+| Foot of Esja            | 0.99°           | 1.03°         | 1.03°        | 1.03°        |
+| Þingvellir              | 0.45°           | 0.44°         | 0.44°        | 0.44°        |
+| Esja, steep south slope | 3.62°           | 3.06°         | 3.06°        | 3.06°        |
+| Esja, top plateau       | 1.55°           | 0.93°         | 0.93°        | 0.93°        |
+| Úlfarsfell hilltop      | 1.22°           | 0.85°         | 0.85°        | 0.85°        |
+| Vífilsfell, steep slope | 3.64°           | 2.27°         | 2.27°        | 2.27°        |
+
+- **Only the closest 500 m matters for the horizon**; reading the 10 m data
+  further out changed nothing. So the horizon uses it to 500 m and keeps the
+  40 m layer from there to 2 km.
+- **The viewer's own ground height must come from the 10 m data too.** The
+  first try took the near terrain from the 10 m data but the viewer's height
+  from the 40 m layer, which on a slope reads several metres high, and the
+  result was worse than before (4.84° on the Esja slope).
+- On steep slopes two to three degrees of error remain. A 10 m cell on a 40°
+  slope spans nine metres of height; only finer data would do better.
+- The horizon still leaves out ground closer than 100 m. That limit was set
+  for the 40 m layer and has not been re-measured.
+- **Cost:** one horizon went from about 30–50 KB to 60–110 KB.
+
+Both changes are in the terrain repository's `horizon()` and `profile()`, so
+Northbound's terrain check and Look around have the better horizon too.
+
+---
+
+## 6. What went wrong on the way
 
 - **Misaligned profiles.** The first run of section 3 showed mixed profiles
   doing worse than coarse alone, with margins up to 30 dB out. The cause was
@@ -245,6 +309,8 @@ ways from `tf5nn.github.io`, everything over the network:
   no data as sea level. The test against the mosaic caught it.
 - **The first estimate's blind spot** near the antenna, in section 1, was
   found by a user's test on the live site, not by the comparison.
+- **A stale test copy.** The first check of section 5's built version reported
+  the old figures, because the script was loading an old copy of the module.
 
 ---
 

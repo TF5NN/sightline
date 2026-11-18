@@ -168,15 +168,22 @@ and says whether there is a line of sight or the signal has to bend over the
 terrain.
 
 It is the app's own link estimate (`js/radio.js`), with the figures "Use as B"
-on that station would give, run on a coarse profile from the small "highest
-ground per cell" layers in the [terrain](https://github.com/TF5NN/terrain)
-repository instead of the full ArcticDEM data: Iceland only, about 180 KB for
-the eight ÍRA sites from a new spot (plus 155 KB once), against megabytes for
-one full profile. The coarse profile reads a little high, so the estimate errs slightly
-on the careful side. Compared with the same estimate on the 10 m data over 343
-paths at 145 MHz, the margin was 0.6 dB lower in the middle case, 90% of paths
-were within −4 to +1 dB, and 338 fell in the same colour (the other five in the
-one next to it). Tap a station and use it as B for the real profile.
+on that station would give, run on a quick profile from the layers in the
+[terrain](https://github.com/TF5NN/terrain) repository instead of the full
+ArcticDEM data. Iceland only.
+
+The quick profile is the 10 m data itself within 2 km of each end, counting
+the ground from 10 m out, and a 100 m "highest ground per cell" layer between.
+The ends matter most: on a summit, the plateau around the antenna is what gets
+in the way. From five spots (a summit, two hilltops and slopes, a valley floor,
+a street) to five repeaters, against the same estimate on 10 m data all the
+way: 0.1 dB off in the middle case, 3.6 dB at worst, the same colour on all 25.
+Before the ends were read from the 10 m data it was 2.0 dB and 14.9 dB.
+
+It costs about 400–470 KB for the nine ÍRA repeaters from a new spot (plus
+155 KB once), against megabytes for one full profile. Tap a station and use it
+as B for the real profile, which also reads 2 m data. The measurements are in
+[`docs/terrain-layers.md`](docs/terrain-layers.md).
 `js/sight.js` holds the thresholds and the wording.
 
 ## Look around

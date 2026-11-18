@@ -1,13 +1,15 @@
 // A first look at which stations can be worked from point A, without loading
 // a full profile for each. It runs the app's own radio link estimate on a
-// coarse terrain profile from the small terrain layers for Iceland that
-// Northbound's terrain check also uses (github.com/TF5NN/terrain): "highest
-// ground per cell" grids, a few kilobytes per path. They are loaded only when
-// a station layer is showing and point A is placed, or for Look around.
+// quick terrain profile from the terrain layers for Iceland that Northbound's
+// terrain check also uses (github.com/TF5NN/terrain). They are loaded only
+// when a station layer is showing and point A is placed, or for Look around.
 //
-// Every cell holds its highest ground, so the coarse profile reads a little
-// high and the estimate errs slightly on the careful side. Against the same
-// estimate on the full 10 m data it is typically within a decibel or two.
+// The quick profile is the 10 m data itself within 2 km of each end, counted
+// from 10 m out, because a link is decided near the antennas more often than
+// anywhere else. Between, it is a 100 m "highest ground per cell" layer, which
+// reads a little high, so the estimate errs slightly on the careful side.
+// Against the same estimate on 10 m data all the way it is typically within a
+// decibel, and within about 4 dB at worst in the paths tried.
 
 import { STANDARD_K, linkEstimate } from './radio.js';
 import { resolveRadio } from './settings.js';
