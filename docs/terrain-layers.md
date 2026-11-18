@@ -242,9 +242,13 @@ and for the nearest part of the horizon.
   to 0.1 dB and 3.6 dB. It was built, and then **set aside: Sightline is to
   stay as it is**, with the 2 m data closest to the antennas in the full
   profile and the quick estimate as described in section 1.
-- **The horizon** only gains from the 10 m data in its closest 500 m. That
-  became an option in the terrain repository (`closeDetail`), which Northbound
-  asks for. Sightline's Look around does not, and keeps the horizon it had.
+- **The horizon** only gains from the 10 m data in its closest 500 m, and gains
+  far more from counting the ground closer than 100 m, which the 10 m data
+  allows: checked against ArcticDEM's 2 m data at seven spots, steep spots went
+  from 13–30° out in their worst directions to 1–2°, with no false walls. That
+  became an option in the terrain repository (`closeDetail`, ground from 10 m
+  out), which Northbound's terrain check and Sightline's Look around both ask
+  for. The figures are in the terrain repository's README.
 
 The work and its full tables are kept on the branch **`detail-near`**, here and
 in the terrain repository, unmerged, in case a version that works without a

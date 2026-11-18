@@ -109,6 +109,7 @@ const el = {
   lookDialog: $('look-dialog'),
   lookView: $('look-view'),
   lookFacing: $('look-facing'),
+  lookNearest: $('look-nearest'),
   lookClose: $('look-close'),
   share: $('share'),
   about: $('about'),
@@ -494,7 +495,11 @@ async function openLookAround() {
       return;
     }
     const from = { lat: a.lat, lon: a.lon, antennaMetres: state.settings.a.height };
-    const horizon = await layers.horizon(from);
+    // closeDetail: the closest 500 m from the 10 m data, with the ground counted from 10 m out, as
+    // in Northbound. Without it the nearest 100 m is left out, and on a hilltop or slope the
+    // hillside beside the point, which is the real skyline there, goes missing.
+    const horizon = await layers.horizon({ ...from, closeDetail: true });
+    el.lookNearest.textContent = String(horizon.nearestMetres ?? 100);
     const marks = [];
     for (const site of sites.filter((s) => state.layersOn.has(s.layer))) {
       const estimates = await estimateSite(layers, a, site);

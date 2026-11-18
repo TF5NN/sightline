@@ -187,8 +187,12 @@ it, or use the arrow keys, to turn and tilt. Stations on the layers that are
 showing, and point B, are marked where they stand, in the same colours as on
 the map; one with no line of sight is drawn behind the ground, so the direction
 to it is still shown. It is drawn from the same small terrain layers as "Stations seen
-from A" (Iceland only, about 40 KB), and leaves out buildings, trees and ground
-closer than 100 m. `js/panorama.js` is the maths (shared with Northbound's
+from A" (Iceland only, about 60–110 KB), and leaves out buildings, trees and ground
+closer than 10 m: the nearest 500 m is read from the terrain repository's 10 m
+data, with the ground counted from 10 m out, because on a hilltop or slope
+the hillside beside the point is the skyline (the terrain repository's README
+has the figures, against ArcticDEM's 2 m data). On a slope, point A has to be
+right to a few metres. `js/panorama.js` is the maths (shared with Northbound's
 look-around view), `js/lookaround.js` the drawing.
 
 ## Light and dark
