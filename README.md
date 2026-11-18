@@ -26,8 +26,13 @@ stays when you lift it. The banner, colours and fonts are shared with
 ## How it works
 
 1. You place point A and point B.
-2. A draft is drawn from the 10 m layer and the link is worked out (quietly,
-   on the default station, until you open the radio side).
+2. A draft is drawn from the 10 m data and the link is worked out (quietly,
+   on the default station, until you open the radio side). In Iceland the
+   draft is read from a copy of that data in the
+   [terrain](https://github.com/TF5NN/terrain) repository, cut into small
+   tiles: the same heights, to the nearest metre, for about a tenth of the
+   download (see "The draft in Iceland" below). Elsewhere, or if that cannot
+   be reached, it is read from ArcticDEM itself.
 3. "Smart detail" then reads 2 m data only where it can change the answer:
    the first and last 2 km, and wherever the ground comes within one Fresnel
    radius of the line of sight. Under 15 MB it loads by itself; above that it
@@ -70,7 +75,8 @@ Read the margin as give or take 10 dB.
 
 Your points and settings stay in the browser and in the page address; the
 terrain requests go straight from your browser to the public ArcticDEM archive.
-With a station layer showing and point A placed in Iceland, or when Look around
+In Iceland the first draft of a profile is fetched from `tf5nn.github.io/terrain`
+instead. With a station layer showing and point A placed in Iceland, or when Look around
 is pressed, a few small terrain files are also fetched from `tf5nn.github.io/terrain` to colour the stations by
 whether A can work them (see "Stations seen from A" below).
 The device's location is asked for only when "My location" is pressed and is
@@ -100,6 +106,7 @@ Sentinel-2, CC BY-NC-SA 4.0: free for non-commercial use with credit).
 | `js/radio.js` | Curvature, Fresnel zone, diffraction, link budget, and where 2 m data is worth fetching. Pure maths |
 | `js/stations.js` | Reads the stations sheet and names the layers |
 | `js/panorama.js`, `js/lookaround.js` | The look-around view: where each direction lands in the picture, and the drawing |
+| `js/owndraft.js` | The first draft of a profile from the shared terrain layers, where they cover the path |
 | `js/sight.js` | Which stations point A can work: opens the shared terrain layers, runs the link estimate on a coarse profile, words the answer |
 | `js/settings.js` | Bands, radios and antennas, and how the choices are kept in the page address (links from before the lists still open) |
 | `js/profile.js` | Samples a path, fills holes, stitches 10 m and 2 m data into one profile |
@@ -131,6 +138,22 @@ python3 test/ui/check.py       # the whole app in headless Chrome (needs: pip in
 The checks read small made-up terrain tiles in `test/tiles/` whose true height
 is known everywhere, so the reader can be compared with the right answer.
 `python3 tools/make_test_tiles.py test/tiles` rebuilds them.
+
+## The draft in Iceland
+
+ArcticDEM's 10 m files are made for reading large areas: a path draws on big
+blocks, about 110 KB for every kilometre. The terrain repository holds the
+same 10 m data for Iceland in 2 km tiles of about 9 KB, and `js/owndraft.js`
+reads the draft from those: roughly 8–10 KB a kilometre.
+
+On five real paths, 6 to 99 km long, the draft download fell from 1.1–10.3 MB
+to 0.1–0.8 MB, and the final link margin, after the 2 m detail, was the same
+to 0.01 dB. The 2 m detail still comes from ArcticDEM (2–3 MB a path) and is
+now the larger part. A hole in ArcticDEM is a hole in the copy too, and is
+filled from ArcticDEM's 32 m layer as before.
+
+To compare the two sources, add `?draft=arcticdem` to the page address: the
+draft is then read from ArcticDEM even in Iceland.
 
 ## Stations seen from A
 
