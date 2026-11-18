@@ -230,7 +230,31 @@ ways from `tf5nn.github.io`, everything over the network:
 
 ---
 
-## 5. What went wrong on the way
+## 5. The 10 m data close in (measured; not used by Sightline)
+
+After the 10 m layer existed, two more things were measured on 18 November
+2026: reading it for the ground near each end of the quick station estimate,
+and for the nearest part of the horizon.
+
+- **The station estimate** got much closer to the 10 m answer when the 10 m
+  data was read for 2 km at each end and the ground counted from 10 m out:
+  on 25 awkward paths, from 2.0 dB off in the middle case and 14.9 dB at worst
+  to 0.1 dB and 3.6 dB. It was built, and then **set aside: Sightline is to
+  stay as it is**, with the 2 m data closest to the antennas in the full
+  profile and the quick estimate as described in section 1.
+- **The horizon** only gains from the 10 m data in its closest 500 m. That
+  became an option in the terrain repository (`closeDetail`), which Northbound
+  asks for. Sightline's Look around does not, and keeps the horizon it had.
+
+The work and its full tables are kept on the branch **`detail-near`**, here and
+in the terrain repository, unmerged, in case a version that works without a
+connection is wanted one day: there the 2 m data could not be fetched and the
+10 m layer would be the finest there is. This page's copy on that branch has
+the details.
+
+---
+
+## 6. What went wrong on the way
 
 - **Misaligned profiles.** The first run of section 3 showed mixed profiles
   doing worse than coarse alone, with margins up to 30 dB out. The cause was
