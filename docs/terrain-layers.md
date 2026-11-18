@@ -209,6 +209,25 @@ from this machine's disk.
 - The first chart came after about 1 s against 2–5 s. That flatters the layer,
   which was read from disk; see the live figures below.
 
+**On the live site**, after publishing, the same five paths were loaded both
+ways from `tf5nn.github.io`, everything over the network:
+
+| Path                             | Draft, ArcticDEM | Draft, our layer   | First chart     | Finished        |
+| -------------------------------- | ---------------- | ------------------ | --------------- | --------------- |
+| Akureyri to Vaðlaheiði, 6 km     | 1.1 MB           | 62 KB in 9 files   | 3.7 s to 2.3 s  | 5.4 s to 4.1 s  |
+| Foot of Esja to Perlan, 13 km    | 1.4 MB           | 91 KB in 14 files  | 3.1 s to 2.1 s  | 5.5 s to 4.2 s  |
+| Reykjavík to Skálafell, 24 km    | 2.9 MB           | 246 KB in 22 files | 3.6 s to 2.3 s  | 5.5 s to 4.4 s  |
+| Þverfellshorn to Bláfjöll, 30 km | 3.7 MB           | 262 KB in 26 files | 3.6 s to 2.6 s  | 5.3 s to 4.3 s  |
+| Reykjavík to Búrfell, 99 km      | 10.3 MB          | 750 KB in 72 files | 6.0 s to 3.3 s  | 8.3 s to 5.6 s  |
+
+- The margins, terrain losses and verdicts were again identical on all five,
+  and no ArcticDEM 10 m data was read with the layer in use.
+- The draft download fell by 92–94%.
+- The time saved is real but smaller than the local run suggested: about one
+  second on short paths and nearly three on the 99 km one. The first chart
+  still takes two to three seconds, most of it the page and its libraries
+  loading, not the terrain. One run each, on one connection.
+
 ---
 
 ## 5. What went wrong on the way
