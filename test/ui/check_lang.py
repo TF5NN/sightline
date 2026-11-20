@@ -158,7 +158,7 @@ def main():
             page.wait_for_timeout(500)
             card = text(page, ".station-popup")
             check("Hlusta" in card and "Senda" in card and "yfir jörðu" in card and "Nota sem A" in card, f"{name}: a repeater's card is in Icelandic")
-            check("vert að athuga" in card or "ISAVIA-húsinu" in card, f"{name}: its notes are in Icelandic too")
+            check("Tengdur á 70 cm við TF2RPJ" in card or "ISAVIA-húsinu" in card, f"{name}: its notes are in Icelandic too")
             page.screenshot(path=os.path.join(OUT, f"{name}-is-station.png"))
 
             # --- how it works ------------------------------------------------------------------
