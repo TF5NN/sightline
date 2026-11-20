@@ -113,6 +113,8 @@ Sentinel-2, CC BY-NC-SA 4.0: free for non-commercial use with credit).
 | `js/geo.js`, `js/projection.js`, `js/geoid.js` | Distances and bearings, map-grid conversion, sea-level correction. Pure maths |
 | `js/chart.js` | The profile chart |
 | `js/theme.js` | Light or dark: applies the theme before the first paint, and runs the header button |
+| `js/strings.js` | Every piece of text the app shows, in English and Icelandic side by side. Change wordings here |
+| `js/lang.js`, `js/i18n.js` | English or Icelandic: picks the language before the first paint, puts the words on the page, and runs the EN / IS switch |
 | `step0.html`, `js/step0.js` | Data connection test: can this browser read the real files, and how are they laid out? |
 | `vendor/` | Copies of Leaflet 1.9.4, geotiff.js 3.0.5 and Plotly basic 4.3.0 |
 | `tools/` | Scripts that generate the sea-level table and the test tiles |
@@ -133,6 +135,7 @@ not work; browsers only load this kind of page from a web address.)
 npm install
 npm run check                  # type check, then maths and terrain reader; a few seconds
 python3 test/ui/check.py       # the whole app in headless Chrome (needs: pip install playwright)
+python3 test/ui/check_lang.py  # the same for the two languages: no English left on the Icelandic side, the switch
 ```
 
 The checks read small made-up terrain tiles in `test/tiles/` whose true height
@@ -194,6 +197,25 @@ the hillside beside the point is the skyline (the terrain repository's README
 has the figures, against ArcticDEM's 2 m data). On a slope, point A has to be
 right to a few metres. `js/panorama.js` is the maths (shared with Northbound's
 look-around view), `js/lookaround.js` the drawing.
+
+## English and Icelandic
+
+The app speaks English and Icelandic, with an EN / IS switch in the header like
+the one on the TF5NN main site. Which language it opens in:
+
+1. `?lang=is` or `?lang=en` in the address. The main site adds this to its
+   "Open the app" buttons, so the app follows the language the visitor was
+   reading the site in. It is then taken out of the address, so a shared link
+   does not force a language on the person who opens it.
+2. Otherwise the visitor's last choice, remembered in the browser as
+   `tf5nn-lang` (the main site writes the same name, so any link from it follows).
+3. Otherwise Icelandic for a browser set to Icelandic, English for everyone else.
+
+All the short texts are in `js/strings.js`, both languages side by side. The
+long passages (the About box and `how.html`) are written out twice in the page,
+once in each language, in blocks marked `data-only="en"` and `data-only="is"`.
+The stations sheet has a `notes_is` column for the notes in Icelandic. The data
+connection test (`step0.html`) is English only.
 
 ## Light and dark
 

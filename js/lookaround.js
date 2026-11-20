@@ -3,6 +3,7 @@
 // turns the view. This file draws into an <svg> it is given; the maths is in
 // panorama.js and the skyline comes from the shared terrain layers (sight.js).
 
+import { t } from './i18n.js';
 import { compass, frame, ground, horizonAngle, line, project } from './panorama.js';
 
 const WIDTH = 400;
@@ -13,6 +14,8 @@ const turn = (degrees) => ((degrees % 360) + 360) % 360;
 const escape = (text) => String(text).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
 const ring = (el) => Array.from({ length: 121 }, (_, i) => ({ az: i * 3, el }));
 const CARDINAL = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+// The compass letter for 0, 45, 90 … degrees, in the page's language (N, NA, A … in Icelandic).
+const cardinal = (az) => t(`compass.${CARDINAL[az / 45]}`);
 
 /**
  * @typedef {{ az: number, el: number, label: string, kind: 'good' | 'marginal' | 'blocked' | 'b' }} Mark
@@ -35,7 +38,7 @@ export function picture(camera, horizon, marks) {
   for (const az of [0, 90, 180, 270]) {
     parts.push(`<path d="${line(camera, view, Array.from({ length: 31 }, (_, i) => ({ az, el: i * 3 })))}" class="look-grid"/>`);
     const high = at(az, 76);
-    if (high) parts.push(`<text x="${(high[0] + 3).toFixed(1)}" y="${high[1].toFixed(1)}" class="look-degree">${CARDINAL[az / 45]}</text>`);
+    if (high) parts.push(`<text x="${(high[0] + 3).toFixed(1)}" y="${high[1].toFixed(1)}" class="look-degree">${cardinal(az)}</text>`);
   }
   for (const el of [30, 60]) {
     const p = at(camera.yaw, el);
@@ -50,7 +53,7 @@ export function picture(camera, horizon, marks) {
     parts.push(`<path d="M${a[0].toFixed(1)},${a[1].toFixed(1)}L${b[0].toFixed(1)},${b[1].toFixed(1)}" class="look-tick"/>`);
     if (label) {
       const main = az % 45 === 0;
-      parts.push(`<text x="${label[0].toFixed(1)}" y="${(label[1] + 3).toFixed(1)}" text-anchor="middle" class="${main ? 'look-cardinal' : 'look-bearing'}">${main ? CARDINAL[az / 45] : `${az}°`}</text>`);
+      parts.push(`<text x="${label[0].toFixed(1)}" y="${(label[1] + 3).toFixed(1)}" text-anchor="middle" class="${main ? 'look-cardinal' : 'look-bearing'}">${main ? cardinal(az) : `${az}°`}</text>`);
     }
   }
   // Stations and point B: a stalk from the skyline (or the level line) to a dot, with a name.
@@ -86,13 +89,14 @@ export function picture(camera, horizon, marks) {
 }
 
 /** One line under the picture: which way the view faces. */
-export const facingWords = (camera) => `Looking ${compass(camera.yaw)} · ${Math.round(camera.yaw) % 360}° · ${Math.round(camera.pitch)}° up`;
+export const facingWords = (camera) =>
+  t('look.facing', { direction: t(`compass.${compass(camera.yaw)}`), bearing: Math.round(camera.yaw) % 360, pitch: Math.round(camera.pitch) });
 
 /**
  * Make an <svg> into a look-around view.
  * @param {SVGSVGElement} svg
  * @param {HTMLElement} facing where "Looking NNE · 20° · 10° up" is written
- * @returns {{ show: (horizon: object, marks: Mark[], yaw: number) => void }}
+ * @returns {{ show: (horizon: object, marks: Mark[], yaw: number) => void, refresh: () => void }}
  */
 export function createLookAround(svg, facing) {
   let camera = { yaw: 0, pitch: 12 };
@@ -105,7 +109,7 @@ export function createLookAround(svg, facing) {
     if (!horizon) return;
     svg.innerHTML = picture(camera, horizon, marks);
     facing.textContent = facingWords(camera);
-    svg.setAttribute('aria-label', `View from point A towards ${compass(camera.yaw)}, tilted ${Math.round(camera.pitch)} degrees up. Drag or use the arrow keys to look around.`);
+    svg.setAttribute('aria-label', t('look.aria', { direction: t(`compass.${compass(camera.yaw)}`), pitch: Math.round(camera.pitch) }));
   }
   const move = (yaw, pitch) => {
     camera = { yaw: turn(yaw), pitch: Math.max(0, Math.min(MAX_PITCH, pitch)) };
@@ -129,6 +133,8 @@ export function createLookAround(svg, facing) {
   });
 
   return {
+    /** Draw it again as it is, in the page's language (after the EN / IS switch). */
+    refresh: draw,
     show(newHorizon, newMarks, yaw) {
       horizon = newHorizon;
       marks = newMarks;

@@ -1,11 +1,11 @@
-﻿layer,show,callsign,name,type,output_mhz,input_mhz,tone,lat,lon,power_w,antenna,gain_dbi,height_m,cable_db,status,position_confidence,source,notes
-ira,yes,TF3RPA,Skálafell,FM,145.600,145.000,88.5,64.23889,-21.46472,25,,,,,active,high,ÍRA website; ÍRA annual report 2026,Site at about 771 m. UHF link to TF2RPJ and TF3RPB.
-ira,yes,TF3RPB,Bláfjöll,FM,145.650,145.050,88.5,63.97639,-21.63500,25,,,,,active,high,ÍRA website,Position as published by ÍRA. A pin placed by eye on the mast was about 600 m from this; worth checking. Linked on 70 cm to TF2RPJ.
-ira,yes,TF3RPI,Bláfjöll,D-STAR,439.950,434.950,,63.97639,-21.63500,25,,,,,active,high,ÍRA website,"In the ISAVIA building, same site as TF3RPB. Internet gateway."
-ira,yes,TF1RPE,Búrfell,FM,145.700,145.100,88.5,64.07500,-19.82194,30,,,,,active,high,ÍRA website,Site at about 669 m (annual report says 690 m).
-ira,yes,TF5RPD,Vaðlaheiði,FM,145.625,145.025,88.5,65.73028,-18.00722,25,,,,,active,high,ÍRA website,Repaired in 2025.
-ira,yes,TF2RPJ,Strútur,FM,145.750,145.150,88.5,64.74900,-20.68130,25,,,,,active,high,"OpenStreetMap summit, matches ÍRA's 937 m",Moved here from Álftanes á Mýrum in 2025.
-ira,yes,TF5RPG,Þrándarhlíðarfjall,FM,145.775,145.175,88.5,65.41127,-19.49982,,Kathrein 2-dipole VHF,,,,active,high,ÍRA annual report 2026,Installed 3 October 2025. Power not published.
-ira,yes,TF3RVK,Perlan,FM,439.900,432.900,88.5,64.12900,-21.91870,25,Quarter-wave,2,,,active,medium,Position of the Perlan building,No antenna height published. The terrain data includes the building itself.
-ira,yes,TF3DMR,Skeljanes,DMR,439.850,434.850,CC1,64.12550,-21.94967,,UHF antenna on the club mast,,,,active,high,ÍRA annual report 2026,Brandmeister 274002. Sources disagree on which of the two frequencies is the output.
-ira,no,TF3RPK,Skálafell,FM,145.575,,,64.23889,-21.46472,,,,,,off air,high,ÍRA,Off the air since 3 November 2023.
+﻿layer,show,callsign,name,type,output_mhz,input_mhz,tone,lat,lon,power_w,antenna,gain_dbi,height_m,cable_db,status,position_confidence,source,notes,notes_is
+ira,yes,TF3RPA,Skálafell,FM,145.600,145.000,88.5,64.23889,-21.46472,25,,,,,active,high,ÍRA website; ÍRA annual report 2026,Site at about 771 m. UHF link to TF2RPJ and TF3RPB.,Staðurinn er í um 771 m hæð. UHF-tenging við TF2RPJ og TF3RPB.
+ira,yes,TF3RPB,Bláfjöll,FM,145.650,145.050,88.5,63.97639,-21.63500,25,,,,,active,high,ÍRA website,Position as published by ÍRA. A pin placed by eye on the mast was about 600 m from this; worth checking. Linked on 70 cm to TF2RPJ.,Staðsetning eins og ÍRA birtir hana. Pinni sem var settur eftir auga á mastrið var um 600 m frá þessu; vert að athuga. Tengdur á 70 cm við TF2RPJ.
+ira,yes,TF3RPI,Bláfjöll,D-STAR,439.950,434.950,,63.97639,-21.63500,25,,,,,active,high,ÍRA website,"In the ISAVIA building, same site as TF3RPB. Internet gateway.","Í ISAVIA-húsinu, sama stað og TF3RPB. Tenging við netið."
+ira,yes,TF1RPE,Búrfell,FM,145.700,145.100,88.5,64.07500,-19.82194,30,,,,,active,high,ÍRA website,Site at about 669 m (annual report says 690 m).,Staðurinn er í um 669 m hæð (ársskýrslan segir 690 m).
+ira,yes,TF5RPD,Vaðlaheiði,FM,145.625,145.025,88.5,65.73028,-18.00722,25,,,,,active,high,ÍRA website,Repaired in 2025.,Lagaður árið 2025.
+ira,yes,TF2RPJ,Strútur,FM,145.750,145.150,88.5,64.74900,-20.68130,25,,,,,active,high,"OpenStreetMap summit, matches ÍRA's 937 m",Moved here from Álftanes á Mýrum in 2025.,Fluttur hingað frá Álftanesi á Mýrum árið 2025.
+ira,yes,TF5RPG,Þrándarhlíðarfjall,FM,145.775,145.175,88.5,65.41127,-19.49982,,Kathrein 2-dipole VHF,,,,active,high,ÍRA annual report 2026,Installed 3 October 2025. Power not published.,Settur upp 3. október 2025. Afl ekki birt.
+ira,yes,TF3RVK,Perlan,FM,439.900,432.900,88.5,64.12900,-21.91870,25,Quarter-wave,2,,,active,medium,Position of the Perlan building,No antenna height published. The terrain data includes the building itself.,Engin loftnetshæð birt. Landgögnin innihalda bygginguna sjálfa.
+ira,yes,TF3DMR,Skeljanes,DMR,439.850,434.850,CC1,64.12550,-21.94967,,UHF antenna on the club mast,,,,active,high,ÍRA annual report 2026,Brandmeister 274002. Sources disagree on which of the two frequencies is the output.,Brandmeister 274002. Heimildum ber ekki saman um á hvorri tíðninni endurvarpinn sendir.
+ira,no,TF3RPK,Skálafell,FM,145.575,,,64.23889,-21.46472,,,,,,off air,high,ÍRA,Off the air since 3 November 2023.,Ekki í loftinu síðan 3. nóvember 2023.

@@ -1019,6 +1019,60 @@ dialog li {
   color: var(--amber-ink);
 }
 
+/* English or Icelandic: the EN / IS buttons in the header, the same as on the TF5NN main site. */
+.lang-switch {
+  display: flex;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.lang-switch button {
+  min-height: 0;
+  margin: 0;
+  padding: 7px 9px;
+  border: none;
+  border-radius: 0;
+  background: none;
+  font: 500 13px var(--mono);
+  line-height: normal;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.lang-switch button + button {
+  border-left: 1px solid var(--line-strong);
+}
+
+.lang-switch button:hover {
+  color: var(--ink);
+  background: var(--surface);
+}
+
+.lang-switch button[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--on-ink, var(--surface));
+}
+
+/* A passage written out in both languages (data-only="en" / "is"): only the page's language shows. */
+html[lang='en'] [data-only='is'],
+html[lang='is'] [data-only='en'] {
+  display: none !important;
+}
+
+/* In Icelandic the page waits for its words before it shows, so it does not flash English first.
+   If the script never runs, it shows anyway after a moment, in English. */
+html[lang='is']:not(.i18n-ready) .app-shell {
+  visibility: hidden;
+  animation: i18n-show 0s 2.5s forwards;
+}
+
+@keyframes i18n-show {
+  to {
+    visibility: visible;
+  }
+}
+
 /* --- Narrower screens (same steps as Northbound) -------------------------------------- */
 
 @media (max-width: 1190px) {
@@ -1111,10 +1165,21 @@ dialog li {
   }
 }
 
-/* Phones: the banner keeps the name and the two most useful links; GitHub moves to the foot of the page. */
+/* Phones: the banner keeps the name, About, the language and the theme. GitHub and TF5NN move to
+   the foot of the page (TF5NN is in About too). */
 @media (max-width: 520px) {
-  .callsign.github {
+  .callsign.github,
+  .callsign.home {
     display: none;
+  }
+
+  /* The language switch shows only the language it switches to: EN on the Icelandic page, IS on the English. */
+  .lang-switch button[aria-pressed='true'] {
+    display: none;
+  }
+
+  .lang-switch button + button {
+    border-left: none;
   }
 
   .header-right {
@@ -1122,13 +1187,13 @@ dialog li {
   }
 }
 
-/* Very narrow phones: the name and About. The TF5NN link is at the foot of the page and in About. */
+/* Very narrow phones: just the name, without the line under it, so it stays clear of the buttons. */
 @media (max-width: 380px) {
   .header {
     padding: 0 14px;
   }
 
-  .callsign.home {
+  .brand small {
     display: none;
   }
 }
@@ -1391,6 +1456,11 @@ dialog li {
   display: grid;
   grid-template-columns: 70px 1fr;
   align-items: baseline;
+}
+
+/* The Icelandic labels are longer ("Staðsetning"). */
+html[lang='is'] .station-popup > .station-card > .detail {
+  grid-template-columns: 92px 1fr;
 }
 
 .station-popup .k {

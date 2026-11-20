@@ -4,16 +4,17 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#214e3a" />
-    <title>Sightline: how it works and how far to trust it</title>
-    <meta name="description" content="How Sightline draws a terrain profile and estimates a radio link, and how its results have compared with real links." />
+    <title data-i18n="how.title">Sightline: how it works and how far to trust it</title>
+    <meta name="description" data-i18n-attr="content:how.description" content="How Sightline draws a terrain profile and estimates a radio link, and how its results have compared with real links." />
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="css/style.css" />
+    <script src="js/lang.js"></script>
     <script src="js/theme.js"></script>
   </head>
   <body>
     <div class="app-shell">
     <header class="header">
-      <a href="./" class="brand" aria-label="Sightline home">
+      <a href="./" class="brand" aria-label="Sightline home" data-i18n-attr="aria-label:brand.home">
         <span class="brand-icon">
           <svg viewBox="0 0 36 36" aria-hidden="true" focusable="false">
             <path d="M4.5 28 13 15.2 17.4 22 23.6 11.2 31.5 28" />
@@ -22,10 +23,14 @@
             <circle class="fill" cx="29.25" cy="6.75" r="1.6" />
           </svg>
         </span>
-        <h1>SIGHTLINE<small>TERRAIN PROFILES FOR RADIO LINKS</small></h1>
+        <h1>SIGHTLINE<small data-i18n="brand.tagline">TERRAIN PROFILES FOR RADIO LINKS</small></h1>
       </a>
       <div class="header-right">
-        <a class="callsign" href="./">Back to the app</a>
+        <a class="callsign" href="./" data-i18n="head.back">Back to the app</a>
+        <div class="lang-switch" role="group" aria-label="Language" data-i18n-attr="aria-label:lang.switch">
+          <button type="button" data-lang="en" lang="en" title="English">EN</button>
+          <button type="button" data-lang="is" lang="is" title="Íslenska">IS</button>
+        </div>
         <button class="theme-toggle" type="button" aria-label="Switch to the dark theme">
           <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" /></svg>
           <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></svg>
@@ -33,7 +38,8 @@
       </div>
     </header>
 
-    <main class="doc">
+    <!-- The page twice, once in each language. Only the one for the page's language shows. -->
+    <main class="doc" data-only="en" lang="en">
       <h2>How it works and how far to trust it</h2>
       <p class="lede">
         Sightline answers two questions about a path between two points: is there ground in the way, and would a radio
@@ -202,13 +208,182 @@
         <a href="https://github.com/TF5NN/sightline#data-and-privacy" target="_blank" rel="noopener">README</a>.
       </p>
     </main>
+    <main class="doc" data-only="is" lang="is">
+      <h2>Hvernig það virkar og hve vel má treysta því</h2>
+      <p class="lede">
+        Sightline svarar tveimur spurningum um leið milli tveggja punkta: er land í veginum, og myndi radíósamband
+        líklega virka?
+      </p>
+
+      <div class="box">
+        <p><strong>Í stuttu máli</strong></p>
+        <ul>
+          <li>Þegar það segir að landið hindri leiðina, trúðu því.</li>
+          <li>Á óhindraðri leið hefur matið og raunveruleg sambönd farið saman, svo langt sem það hefur verið athugað.</li>
+          <li>
+            Á hindraðri leið í þéttbýli hefur það verið of bjartsýnt. Þar skaltu lesa Tæpt eða Gott sem „líklega ekki“.
+          </li>
+          <li>Taktu hvert svigrúm sem plús eða mínus 10 dB. Þetta er skipulagstól, ekki loforð.</li>
+        </ul>
+      </div>
+
+      <h3>Notkun</h3>
+      <ol>
+        <li>Smelltu tvisvar á kortið til að setja A og B. Dragðu pinna til að færa hann.</li>
+        <li>Sniðið birtist: landið eftir leiðinni og beina línan milli loftnetanna tveggja.</li>
+        <li>Stilltu loftnetshæðirnar yfir jörðu undir sniðinu. Mastur eða þak telst með.</li>
+        <li>
+          Ýttu á „Meta radíósamband“ til að fá radíóhliðina: veldu tíðnisvið, tæki og loftnet. Ef endarnir tveir
+          eru ólíkir, hakaðu við „Ólík stöð á hvorum enda“.
+        </li>
+        <li>Veffang síðunnar geymir alla uppsetninguna. Ýttu á Deila, eða afritaðu veffangið, til að senda eða vista leið.</li>
+      </ol>
+      <p>
+        Lagahnappurinn í horni kortsins skiptir yfir í loftmyndir og sýnir endurvarpa ÍRA. Smelltu á endurvarpa til að
+        sjá á hverju á að hlusta og senda, og til að nota hann sem punkt A eða B: afl hans, loftnet og hæð eru þá fyllt
+        út fyrir þann enda. Tölur sem enginn hefur birt, aðallega loftnetshæðir, eru merktar sem ágiskaðar.
+      </p>
+      <p>Í síma rennirðu fingri eftir sniðinu til að lesa hæðirnar.</p>
+
+      <h3>Að lesa sniðið</h3>
+      <table>
+        <tr>
+          <td><span class="swatch" style="background: var(--path)"></span>Sjónlína</td>
+          <td>Beina línan frá loftneti til loftnets.</td>
+        </tr>
+        <tr>
+          <td><span class="swatch" style="background: var(--bad)"></span>Hindrun</td>
+          <td>Landið er fyrir ofan línuna. Merkið þarf að sveigja yfir það og tapar styrk við það.</td>
+        </tr>
+        <tr>
+          <td><span class="swatch" style="background: var(--marginal)"></span>Of nærri</td>
+          <td>
+            Landið er undir línunni en nálægt henni, innan við 60% af Fresnel-svæðinu. Merkið veikist örlítið.
+            Sýnt þegar radíóhliðin er opin.
+          </td>
+        </tr>
+        <tr>
+          <td>Fresnel-svæði</td>
+          <td>
+            Rýmið í kringum línuna sem radíómerki notar í raun. Það er breiðast á miðri leið og breiðara á lægri
+            tíðnum: á miðri 20 km leið nær það um 100 m til hvorrar hliðar við línuna á 145 MHz, og um 40 m á
+            868 MHz.
+          </td>
+        </tr>
+      </table>
+      <p>
+        Sveigja jarðar er innbyggð í myndina: landið er teiknað bunga upp á miðri langri leið, svo sjónlínan geti
+        haldist bein. Bungan gerir ráð fyrir því að loftið sveigir radíóbylgjur venjulega örlítið niður á við, sem
+        lætur jörðina virðast þriðjungi stærri en hún er.
+      </p>
+      <p>
+        Með handstöð í höfuðhæð er jörðin við fætur þér innan Fresnel-svæðisins, svo langir kaflar nálægt
+        loftnetunum sjást sem „of nærri“ á sléttlendi. Það er eðlilegt.
+      </p>
+
+      <h3>Radíómatið</h3>
+      <p>Sightline leggur saman einfalt aflbókhald:</p>
+      <ul>
+        <li>það sem sendirinn gefur frá sér, auk beggja loftneta, að frádreginni kapaldeyfingu;</li>
+        <li>að frádreginni deyfingu vegna fjarlægðarinnar einnar (fjarlægðardeyfing);</li>
+        <li>að frádreginni deyfingu vegna lands í veginum (landslagsdeyfing).</li>
+      </ul>
+      <p>
+        Það sem eftir stendur er móttekna merkið. Svigrúmið er hve langt það er yfir veikasta merkinu sem viðtækið
+        getur notað.
+      </p>
+      <table>
+        <tr><th>Svigrúm</th><th>Niðurstaða</th></tr>
+        <tr><td>20 dB eða meira</td><td>Traust</td></tr>
+        <tr><td>10 til 20 dB</td><td>Gott</td></tr>
+        <tr><td>0 til 10 dB</td><td>Tæpt: getur virkað, getur ekki</td></tr>
+        <tr><td>undir 0 dB</td><td>Ólíklegt</td></tr>
+      </table>
+      <p>
+        Landslagsdeyfing er reiknuð á tvo vegu og stærri talan notuð: bognun yfir allt að þrjá hryggi, einn á eftir
+        öðrum, og stöðluð eins-hryggs aðferð (ITU-R P.526) með viðbót fyrir það að raunverulegar hæðir eru breiðar,
+        ekki hnífseggjar. Með ólíka stöð á hvorum enda eru báðar áttir reiknaðar og sú veikari látin ráða. Fyrir
+        LoRa ræðst næmni viðtækisins af dreifistuðli og bandbreidd.
+      </p>
+      <p>
+        Listarnir fyrir radíóamatöra og LoRa mesh eru þeir sem hafa verið bornir saman við raunveruleg sambönd. Hinir
+        (talstöðvar, VHF á sjó, Wi-Fi-tengingar, farsímanet, FM-útvarp) eru grófar upphafstölur sem enginn sem
+        vinnur með þá þjónustu hefur enn athugað. Leyfileg aflmörk eru ekki athuguð fyrir neitt þeirra.
+      </p>
+
+      <h3>Landgögnin</h3>
+      <ul>
+        <li>
+          Hæðirnar koma úr ArcticDEM, sem Polar Geospatial Center gerir úr gervihnattamyndum. Það nær yfir land
+          norðan við um 60°N. Sightline les litla búta úr því beint úr opna safninu þegar þú setur punktana.
+        </li>
+        <li>
+          Þetta er yfirborðslíkan: byggingar og tré eru hluti af „landinu“, eins og þau stóðu þegar myndirnar voru
+          teknar. Jöklar, snjór, nýjar byggingar og tré sem hafa vaxið geta verið öðruvísi í dag.
+        </li>
+        <li>
+          Öll leiðin er lesin með 10 m nákvæmni. Fínustu 2 m gögnunum er bætt við nálægt báðum loftnetum og hvar sem
+          landið kemur nærri sjónlínunni, því þar breyta þau niðurstöðunni. Undir „Ítarlegt“ er hægt að velja 2 m
+          alls staðar.
+        </li>
+        <li>
+          Þar sem safnið hefur engin gögn, til dæmis á opnu hafi, sýnir sniðið eyðu og ekkert er talið vera í
+          veginum þar.
+        </li>
+      </ul>
+
+      <h3>Það sem það veit ekki</h3>
+      <ul>
+        <li><strong>Radíótruflanir.</strong> Það gerir ráð fyrir hljóðlátu viðtæki. Í þéttbýli geta truflanir kostað 5 til 10 dB.</li>
+        <li>
+          <strong>Raunverulega loftnetið þitt.</strong> Loftnet innandyra, í glugga eða undir þaklínu getur verið
+          10 til 20 dB verra en talan á kassanum.
+        </li>
+        <li><strong>Endurkast</strong> af sjó, landi eða byggingum, sem getur hjálpað eða spillt.</li>
+        <li><strong>Veður.</strong> Óvenjuleg bognun yfir sjó getur borið merki miklu lengra en búast mætti við.</li>
+        <li><strong>Margar hindranir í röð</strong>, eins og bær fullur af húsþökum. Það telur í mesta lagi þrjár.</li>
+        <li><strong>Endurvarp frá jónhvolfi á HF.</strong> Þetta er fyrir sjónlínubönd: VHF, UHF og ofar.</li>
+      </ul>
+
+      <h3>Samanburður við raunveruleg sambönd</h3>
+      <p>Tvær athuganir hingað til, báðar í nóvember 2026.</p>
+      <ul>
+        <li>
+          <strong>Ein 143 km leið á 2 m bandinu, yfir fjall.</strong> Í raun opnar 5 W handstöð með gúmmíloftneti
+          endurvarpann en er ólæsileg, og lítið yagi kemst í gegn. Sightline segir Tæpt og Gott. Líkaninu var
+          breytt einu sinni til að ná þessu.
+        </li>
+        <li>
+          <strong>Fjórtán MeshCore-endurvarpar á suðvesturhorninu, 91 par, 868 MHz.</strong> Hvert par sem Sightline
+          taldi ómögulegt hafði í raun aldrei heyrst (28 af 28), og 40 af 41 raunverulegu sambandi komu út sem
+          nothæf. Á hindruðum samböndum í þéttbýli var spáð merki um 16 dB sterkara en mælt var. Það þurfti að giska
+          á loftnet og hæðir stöðvanna fyrir þá athugun, og vitað er að ágiskunin er röng fyrir sumar, svo hún verður
+          gerð aftur með réttum tölum.
+        </li>
+      </ul>
+      <p>
+        Öll skýrslan, með aðferðinni og takmörkunum hennar, er í
+        <a href="https://github.com/TF5NN/sightline/blob/main/docs/validation.md" target="_blank" rel="noopener">docs/validation.md</a>
+        (á ensku). Ef þú þekkir samband vel og Sightline hefur rangt fyrir sér, er gagnlegt að heyra það:
+        <a href="https://github.com/TF5NN/sightline/issues" target="_blank" rel="noopener">opnaðu mál á GitHub</a>
+        með veffangi síðunnar og því sem gerist í loftinu.
+      </p>
+
+      <h3>Gögnin þín</h3>
+      <p>
+        Punktarnir þínir og stillingar eru í vafranum þínum og í veffangi síðunnar. Heimsóknir eru taldar nafnlaust
+        með GoatCounter, án vafrakaka, og punktarnir eru aldrei sendir. Meira í
+        <a href="https://github.com/TF5NN/sightline#data-and-privacy" target="_blank" rel="noopener">README</a> (á ensku).
+      </p>
+    </main>
 
     <footer class="foot">
-      <a href="./">Back to the app</a> ·
-      Terrain: ArcticDEM, Polar Geospatial Center ·
-      <a href="https://tf5nn.github.io/" target="_blank" rel="noopener">More from TF5NN</a>
+      <a href="./" data-i18n="head.back">Back to the app</a> ·
+      <span data-i18n="foot.terrainShort">Terrain: ArcticDEM, Polar Geospatial Center</span> ·
+      <a href="https://tf5nn.github.io/" target="_blank" rel="noopener" data-i18n="foot.more" data-i18n-attr="href:link.site">More from TF5NN</a>
     </footer>
     </div>
+    <script type="module" src="js/i18n.js"></script>
     <script data-goatcounter="https://tf5nn.goatcounter.com/count" data-goatcounter-settings='{"path": "/sightline/how.html"}'
             async src="https://gc.zgo.at/count.js"></script>
   </body>

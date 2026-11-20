@@ -30,6 +30,7 @@ end's power, antenna and height from this sheet.
 | `position_confidence` | `high`, `medium` or `low`: how sure the position is. Shown in the details. | |
 | `source` | Where the information came from. | |
 | `notes` | Anything worth knowing. Shown in the details. | |
+| `notes_is` | The same notes in Icelandic, shown when the app is in Icelandic. | The English `notes`. |
 
 Where a figure is assumed, the app says so next to it.
 
@@ -37,8 +38,8 @@ Where a figure is assumed, the app says so next to it.
 
 Add lines with a new word in the `layer` column, for example `sar`, and `yes`
 under `show`. A new tick box appears by itself. The tick box is named after
-the word unless a proper name is listed for it in `js/stations.js`
-(`LAYER_NAMES`); `ira`, `ira-aprs`, `f4x4`, `sar` and `meshcore` already have
+the word unless a proper name is listed for it in `js/strings.js`, in English
+and Icelandic, as `layer.` followed by the word; `ira`, `ira-aprs`, `f4x4`, `sar` and `meshcore` already have
 names.
 
 ## Good to know when editing

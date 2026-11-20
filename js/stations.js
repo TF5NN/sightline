@@ -6,17 +6,13 @@
 // forgiving: commas or semicolons between columns, decimal commas, any column
 // order, and a byte-order mark at the start are all accepted.
 
+import { named, t } from './i18n.js';
 import { ANTENNAS, BANDS, RADIOS, antennasFor, mirrorStations, settingsForBand } from './settings.js';
 
-// The tick-box name for each layer. A layer that is not listed here still
-// works; it is named after the word in the sheet's "layer" column.
-export const LAYER_NAMES = {
-  ira: 'ÍRA repeaters',
-  'ira-aprs': 'ÍRA APRS',
-  f4x4: '4x4 club repeaters',
-  sar: 'SAR repeaters',
-  meshcore: 'MeshCore repeaters',
-};
+// The tick-box name for each layer is in js/strings.js, as "layer." and the word in the
+// sheet's "layer" column, in both languages. A layer that is not listed there still
+// works; it is named after that word.
+export const layerName = (id) => named(`layer.${id}`, id);
 
 // Used where the sheet has no figure. The app says so next to each one.
 export const ASSUMED = { powerW: 25, gainDbi: 6, heightM: 10, cableDb: 0 };
@@ -129,6 +125,7 @@ export function readStations(text) {
       confidence: get('position_confidence'),
       source: get('source'),
       notes: get('notes'),
+      notesIs: get('notes_is'), // the same notes in Icelandic, if the sheet has them
     });
   });
   return { stations, problems };
@@ -159,16 +156,16 @@ const mhz = (value) => value.toFixed(3);
 /** How to work a station, as labelled pieces: Listen, Transmit, Tone (or Code). Empty when no frequency is known. */
 export function stationFrequencyParts(station) {
   const parts = [];
-  if (station.outputMHz !== null) parts.push({ label: 'Listen', value: `${mhz(station.outputMHz)} MHz` });
+  if (station.outputMHz !== null) parts.push({ label: t('freq.listen'), value: `${mhz(station.outputMHz)} MHz` });
   if (station.inputMHz !== null) {
     let shift = '';
     if (station.outputMHz !== null) {
       const delta = Math.round((station.inputMHz - station.outputMHz) * 1000) / 1000;
       if (delta !== 0) shift = ` (${delta > 0 ? '+' : '−'}${Math.abs(delta)})`;
     }
-    parts.push({ label: 'Transmit', value: `${mhz(station.inputMHz)} MHz${shift}` });
+    parts.push({ label: t('freq.transmit'), value: `${mhz(station.inputMHz)} MHz${shift}` });
   }
-  if (station.tone) parts.push({ label: /^\d/.test(station.tone) ? 'Tone' : 'Code', value: station.tone });
+  if (station.tone) parts.push({ label: t(/^\d/.test(station.tone) ? 'freq.tone' : 'freq.code'), value: station.tone });
   return parts;
 }
 
@@ -237,7 +234,7 @@ export function settingsWithStation(settings, station, index) {
 export function stationLayers(stations) {
   const layers = new Map();
   for (const station of stations) {
-    if (!layers.has(station.layer)) layers.set(station.layer, { id: station.layer, name: LAYER_NAMES[station.layer] ?? station.layer, stations: [] });
+    if (!layers.has(station.layer)) layers.set(station.layer, { id: station.layer, name: layerName(station.layer), stations: [] });
     layers.get(station.layer).stations.push(station);
   }
   return [...layers.values()];

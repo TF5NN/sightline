@@ -4,20 +4,22 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#214e3a" />
-    <title>Sightline: terrain profiles for radio links</title>
+    <title data-i18n="meta.title">Sightline: terrain profiles for radio links</title>
     <meta
       name="description"
+      data-i18n-attr="content:meta.description"
       content="Click two points and see the terrain between them, from 2 m ArcticDEM data. For hams, mesh builders and anyone placing an antenna north of 60°N."
     />
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
     <link rel="stylesheet" href="css/style.css" />
+    <script src="js/lang.js"></script>
     <script src="js/theme.js"></script>
   </head>
   <body>
     <div class="app-shell">
     <header class="header">
-      <a href="./" class="brand" aria-label="Sightline home">
+      <a href="./" class="brand" aria-label="Sightline home" data-i18n-attr="aria-label:brand.home">
         <span class="brand-icon">
           <svg viewBox="0 0 36 36" aria-hidden="true" focusable="false">
             <path d="M4.5 28 13 15.2 17.4 22 23.6 11.2 31.5 28" />
@@ -26,14 +28,20 @@
             <circle class="fill" cx="29.25" cy="6.75" r="1.6" />
           </svg>
         </span>
-        <h1>SIGHTLINE<small>TERRAIN PROFILES FOR RADIO LINKS</small></h1>
+        <h1>SIGHTLINE<small data-i18n="brand.tagline">TERRAIN PROFILES FOR RADIO LINKS</small></h1>
       </a>
       <div class="header-right">
-        <button id="about-open" class="callsign" type="button">About</button>
+        <button id="about-open" class="callsign" type="button" data-i18n="head.about">About</button>
         <a class="callsign home" href="https://tf5nn.github.io/" target="_blank" rel="noopener" title="More projects from TF5NN"
+           data-i18n-attr="href:link.site;title:head.site"
            data-goatcounter-click="main-site-from-sightline" data-goatcounter-title="Sightline: TF5NN main site link">TF5NN ↗</a>
         <a class="callsign github" href="https://github.com/TF5NN/sightline" target="_blank" rel="noopener" title="Source code on GitHub"
+           data-i18n-attr="title:head.github"
            data-goatcounter-click="github-from-sightline" data-goatcounter-title="Sightline: GitHub link">GitHub ↗</a>
+        <div class="lang-switch" role="group" aria-label="Language" data-i18n-attr="aria-label:lang.switch">
+          <button type="button" data-lang="en" lang="en" title="English">EN</button>
+          <button type="button" data-lang="is" lang="is" title="Íslenska">IS</button>
+        </div>
         <button class="theme-toggle" type="button" aria-label="Switch to the dark theme">
           <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" /></svg>
           <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></svg>
@@ -42,43 +50,43 @@
     </header>
 
     <main>
-      <section class="map-wrap" aria-label="Map">
+      <section class="map-wrap" aria-label="Map" data-i18n-attr="aria-label:map.label">
         <div id="map"></div>
         <div class="map-tools">
-          <button id="locate" type="button" title="Place a point where you are">My location</button>
-          <button id="swap" type="button" disabled>Swap A and B</button>
-          <button id="clear" type="button" disabled>Clear</button>
-          <button id="look" type="button" disabled title="See the skyline from point A (Iceland only)">Look around</button>
-          <button id="share" type="button" title="Copy a link that opens this path with all its settings">Share</button>
+          <button id="locate" type="button" title="Place a point where you are" data-i18n="map.locate" data-i18n-attr="title:map.locateTitle">My location</button>
+          <button id="swap" type="button" disabled data-i18n="map.swap">Swap A and B</button>
+          <button id="clear" type="button" disabled data-i18n="map.clear">Clear</button>
+          <button id="look" type="button" disabled title="See the skyline from point A (Iceland only)" data-i18n="map.look" data-i18n-attr="title:map.lookTitle">Look around</button>
+          <button id="share" type="button" title="Copy a link that opens this path with all its settings" data-i18n="map.share" data-i18n-attr="title:map.shareTitle">Share</button>
         </div>
       </section>
 
-      <section class="panel" aria-label="Terrain profile">
+      <section class="panel" aria-label="Terrain profile" data-i18n-attr="aria-label:profile.label">
         <p id="hint" class="hint">Tap the map to place point A, then point B. Drag a point to move it.</p>
         <p id="stations-line" class="stations-line" hidden></p>
         <p id="sight-line" class="sight-line" hidden>
-          Stations from A, estimated:
-          <span><i class="sight-good"></i>should work</span>
-          <span><i class="sight-marginal"></i>marginal</span>
-          <span><i class="sight-unlikely"></i>unlikely</span>
-          <small>A first estimate of the radio link from coarse terrain data, with your station at A. Tap a station and use it as B for the full profile.</small>
+          <span data-i18n="sight.title">Stations from A, estimated:</span>
+          <span><i class="sight-good"></i><span data-i18n="sight.good">should work</span></span>
+          <span><i class="sight-marginal"></i><span data-i18n="sight.marginal">marginal</span></span>
+          <span><i class="sight-unlikely"></i><span data-i18n="sight.unlikely">unlikely</span></span>
+          <small data-i18n="sight.note">A first estimate of the radio link from coarse terrain data, with your station at A. Tap a station and use it as B for the full profile.</small>
         </p>
 
         <div id="chart" class="chart" hidden></div>
         <p id="readout" class="readout" hidden></p>
         <p id="legend" class="legend" hidden>
-          <span class="entry"><span class="key key-los"></span>Line of sight</span>
-          <span class="entry"><span class="key key-blocked"></span>Blocked</span>
-          <span class="entry" id="legend-grazing" hidden><span class="key key-grazing"></span>Grazing</span>
-          <span class="entry" id="legend-fresnel" hidden><span class="key key-fresnel"></span>Fresnel zone</span>
-          <span class="legend-note">Heights in metres, Earth's curve included</span>
+          <span class="entry"><span class="key key-los"></span><span data-i18n="legend.los">Line of sight</span></span>
+          <span class="entry"><span class="key key-blocked"></span><span data-i18n="legend.blocked">Blocked</span></span>
+          <span class="entry" id="legend-grazing" hidden><span class="key key-grazing"></span><span data-i18n="legend.grazing">Grazing</span></span>
+          <span class="entry" id="legend-fresnel" hidden><span class="key key-fresnel"></span><span data-i18n="legend.fresnel">Fresnel zone</span></span>
+          <span class="legend-note" data-i18n="legend.note">Heights in metres, Earth's curve included</span>
         </p>
 
         <div id="bare-controls" class="bare-controls" hidden>
-          <label>Antenna height A <span class="u">(m)</span>
+          <label><span data-i18n="height.a">Antenna height A</span> <span class="u">(m)</span>
             <input id="height-a" type="number" step="any" min="0" inputmode="decimal" />
           </label>
-          <label>Antenna height B <span class="u">(m)</span>
+          <label><span data-i18n="height.b">Antenna height B</span> <span class="u">(m)</span>
             <input id="height-b" type="number" step="any" min="0" inputmode="decimal" />
           </label>
           <button id="link-toggle" type="button" class="primary" aria-expanded="false" aria-controls="link-panel">
@@ -87,26 +95,26 @@
         </div>
 
         <div class="controls">
-          <button id="load-detail" type="button" hidden>Load 2 m detail</button>
+          <button id="load-detail" type="button" hidden data-i18n="detail.load">Load 2 m detail</button>
         </div>
 
         <p id="status" class="status" role="status" aria-live="polite"></p>
       </section>
 
-      <section id="link-panel" class="panel" aria-label="Radio link estimate" hidden>
-        <h2>Radio link</h2>
+      <section id="link-panel" class="panel" aria-label="Radio link estimate" data-i18n-attr="aria-label:link.label" hidden>
+        <h2 data-i18n="link.title">Radio link</h2>
         <dl id="results" class="results">
-          <div id="verdict-box" class="verdict-box"><dt>Link verdict</dt><dd id="r-verdict">–</dd></div>
-          <div><dt>Margin</dt><dd id="r-margin">–</dd></div>
-          <div><dt>Received signal</dt><dd id="r-received">–</dd></div>
-          <div><dt>Free-space loss</dt><dd id="r-fsl">–</dd></div>
-          <div><dt>Terrain loss</dt><dd id="r-diffraction">–</dd></div>
-          <div><dt>Distance</dt><dd id="r-distance">–</dd></div>
+          <div id="verdict-box" class="verdict-box"><dt data-i18n="result.verdict">Link verdict</dt><dd id="r-verdict">–</dd></div>
+          <div><dt data-i18n="result.margin">Margin</dt><dd id="r-margin">–</dd></div>
+          <div><dt data-i18n="result.received">Received signal</dt><dd id="r-received">–</dd></div>
+          <div><dt data-i18n="result.fsl">Free-space loss</dt><dd id="r-fsl">–</dd></div>
+          <div><dt data-i18n="result.terrain">Terrain loss</dt><dd id="r-diffraction">–</dd></div>
+          <div><dt data-i18n="result.distance">Distance</dt><dd id="r-distance">–</dd></div>
         </dl>
         <p id="link-note" class="note"></p>
 
         <div class="fields">
-          <label>Band
+          <label><span data-i18n="field.band">Band</span>
             <select id="band"></select>
           </label>
           <label><span id="radio-a-label">Radio</span>
@@ -115,88 +123,88 @@
           <label><span id="antenna-a-label">Antenna</span>
             <select id="antenna-a"></select>
           </label>
-          <label class="split-only">Radio at B
+          <label class="split-only"><span data-i18n="field.radioB">Radio at B</span>
             <select id="radio-b"></select>
           </label>
-          <label class="split-only">Antenna at B
+          <label class="split-only"><span data-i18n="field.antennaB">Antenna at B</span>
             <select id="antenna-b"></select>
           </label>
         </div>
         <label class="check">
           <input id="split" type="checkbox" />
-          Different station at each end
+          <span data-i18n="field.split">Different station at each end</span>
         </label>
         <label class="check">
           <input id="fresnel" type="checkbox" />
-          Show the Fresnel zone on the chart
+          <span data-i18n="field.fresnel">Show the Fresnel zone on the chart</span>
         </label>
 
         <details id="advanced">
-          <summary>Advanced</summary>
-          <p class="note">
+          <summary data-i18n="advanced.title">Advanced</summary>
+          <p class="note" data-i18n="advanced.note">
             The lists above fill these in. Type over any of them to use your own figure; choosing from a list again
             puts the list's figure back.
           </p>
           <div class="fields">
-            <label>Frequency <span class="u">(MHz)</span>
+            <label><span data-i18n="field.freq">Frequency</span> <span class="u">(MHz)</span>
               <input id="freq" type="number" step="any" min="1" inputmode="decimal" />
             </label>
-            <label>Power unit
+            <label><span data-i18n="field.powerUnit">Power unit</span>
               <select id="power-unit">
-                <option value="W">Watts</option>
+                <option value="W" data-i18n="field.watts">Watts</option>
                 <option value="dBm">dBm</option>
               </select>
             </label>
-            <label><span class="a-word">Transmit power</span>
+            <label><span class="a-word" data-word="field.power">Transmit power</span>
               <input id="power-a" type="number" step="any" />
             </label>
-            <label class="split-only">Transmit power at B
+            <label class="split-only"><span data-i18n="field.powerB">Transmit power at B</span>
               <input id="power-b" type="number" step="any" />
             </label>
-            <label><span class="a-word">Antenna gain</span> <span class="u">(dBi)</span>
+            <label><span class="a-word" data-word="field.gain">Antenna gain</span> <span class="u">(dBi)</span>
               <input id="gain-a" type="number" step="any" />
             </label>
-            <label class="split-only">Antenna gain at B <span class="u">(dBi)</span>
+            <label class="split-only"><span data-i18n="field.gainB">Antenna gain at B</span> <span class="u">(dBi)</span>
               <input id="gain-b" type="number" step="any" />
             </label>
-            <label><span class="a-word">Cable loss</span> <span class="u">(dB)</span>
+            <label><span class="a-word" data-word="field.cable">Cable loss</span> <span class="u">(dB)</span>
               <input id="cable-a" type="number" step="any" min="0" inputmode="decimal" />
             </label>
-            <label class="split-only">Cable loss at B <span class="u">(dB)</span>
+            <label class="split-only"><span data-i18n="field.cableB">Cable loss at B</span> <span class="u">(dB)</span>
               <input id="cable-b" type="number" step="any" min="0" inputmode="decimal" />
             </label>
-            <label class="lora-only">Spreading factor
+            <label class="lora-only"><span data-i18n="field.sf">Spreading factor</span>
               <select id="sf">
                 <option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option>
               </select>
             </label>
-            <label class="lora-only">Bandwidth <span class="u">(kHz)</span>
+            <label class="lora-only"><span data-i18n="field.bw">Bandwidth</span> <span class="u">(kHz)</span>
               <select id="bw">
                 <option>62.5</option><option>125</option><option>250</option><option>500</option>
               </select>
             </label>
-            <label><span class="a-word">Receiver sensitivity</span> <span class="u">(dBm)</span>
+            <label><span class="a-word" data-word="field.sens">Receiver sensitivity</span> <span class="u">(dBm)</span>
               <input id="sens-a" type="number" step="any" />
             </label>
-            <label class="split-only">Receiver sensitivity at B <span class="u">(dBm)</span>
+            <label class="split-only"><span data-i18n="field.sensB">Receiver sensitivity at B</span> <span class="u">(dBm)</span>
               <input id="sens-b" type="number" step="any" />
             </label>
-            <label class="wide">Terrain detail
+            <label class="wide"><span data-i18n="field.detail">Terrain detail</span>
               <select id="detail">
-                <option value="smart">Smart: 10 m, plus 2 m where it changes the answer</option>
-                <option value="full">2 m for the whole path (larger download)</option>
-                <option value="10m">10 m only (smallest download)</option>
+                <option value="smart" data-i18n="detail.smart">Smart: 10 m, plus 2 m where it changes the answer</option>
+                <option value="full" data-i18n="detail.full">2 m for the whole path (larger download)</option>
+                <option value="10m" data-i18n="detail.10m">10 m only (smallest download)</option>
               </select>
             </label>
-            <label>Most samples per path
+            <label><span data-i18n="field.samples">Most samples per path</span>
               <input id="max-samples" type="number" step="1000" min="2000" max="200000" inputmode="numeric" />
             </label>
-            <label>Earth radius factor <span class="u">k</span>
+            <label><span data-i18n="field.k">Earth radius factor</span> <span class="u">k</span>
               <input id="k" type="number" step="any" min="0.5" max="10" inputmode="decimal" />
             </label>
           </div>
           <p id="sens-note" class="note"></p>
-          <p class="note">
+          <p class="note" data-i18n="advanced.detailNote">
             Smart detail reads 2 m data for the first and last 2 km and wherever the ground comes close to a narrow
             Fresnel zone. k is 1.33 in normal weather: it is how much the air bends radio waves round the Earth.
           </p>
@@ -205,91 +213,155 @@
     </main>
 
     <footer class="foot">
-      Terrain: ArcticDEM, Polar Geospatial Center. Map: © OpenStreetMap contributors.
-      <a href="how.html">How it works and how far to trust it</a> ·
-      <a href="step0.html">Data connection test</a> ·
+      <span data-i18n="foot.terrain">Terrain: ArcticDEM, Polar Geospatial Center. Map: © OpenStreetMap contributors.</span>
+      <a href="how.html" data-i18n="foot.how">How it works and how far to trust it</a> ·
+      <a href="step0.html" data-i18n="foot.test">Data connection test</a> ·
       <a href="https://github.com/TF5NN/sightline" target="_blank" rel="noopener"
-         data-goatcounter-click="github-from-sightline" data-goatcounter-title="Sightline: GitHub link">Source code</a> ·
-      <a href="https://tf5nn.github.io/" target="_blank" rel="noopener"
+         data-goatcounter-click="github-from-sightline" data-goatcounter-title="Sightline: GitHub link" data-i18n="foot.source">Source code</a> ·
+      <a href="https://tf5nn.github.io/" target="_blank" rel="noopener" data-i18n="foot.more" data-i18n-attr="href:link.site"
          data-goatcounter-click="main-site-from-sightline" data-goatcounter-title="Sightline: TF5NN main site link">More from TF5NN</a>
     </footer>
     </div>
 
     <dialog id="look-dialog" aria-labelledby="look-title">
-      <button id="look-close" class="dialog-close" type="button" aria-label="Close look around">×</button>
-      <h2 id="look-title">Look around from A</h2>
+      <button id="look-close" class="dialog-close" type="button" aria-label="Close look around" data-i18n-attr="aria-label:look.close">×</button>
+      <h2 id="look-title" data-i18n="look.title">Look around from A</h2>
       <svg id="look-view" class="look-view" role="img" tabindex="0"></svg>
       <p id="look-facing" class="look-facing"></p>
       <p class="look-note">
-        Drag to look around. This is the terrain's skyline from point A at its antenna height, drawn from coarse
+        <span data-i18n="look.note1">Drag to look around. This is the terrain's skyline from point A at its antenna height, drawn from coarse
         terrain data (Iceland only). Stations on the layers that are showing, and point B, stand where they are:
         green should work, amber marginal, red unlikely. One with no line of sight is drawn behind the ground. Buildings, trees and ground closer
-        than <span id="look-nearest">10</span> m are not included; on a slope, point A has to be right to a few metres.
+        than</span> <span id="look-nearest">10</span> <span data-i18n="look.note2">m are not included; on a slope, point A has to be right to a few metres.</span>
       </p>
     </dialog>
 
     <dialog id="about">
-      <h2>About Sightline</h2>
-      <p>
-        Sightline draws the terrain along the straight path between two points. It reads 2 m elevation data directly
-        from the public ArcticDEM archive, which covers land north of about 60°N. Nothing is stored on a server: your
-        points live only in this page and in its address, which you can copy to share a path.
-      </p>
-      <p>
-        Visits are counted anonymously with GoatCounter: that the page was opened, from which country and which site
-        led here. No cookies, and your points and settings are never sent.
-      </p>
-      <p>
-        The verdict is an estimate from a simple, open model: free-space loss, plus terrain loss worked out two ways
-        (knife-edge diffraction over at most three ridges, and the ITU single-ridge method with its allowance for
-        broad, real terrain), taking the larger. It does not know about reflections, trees that have grown since the images were
-        taken, snow, or noise at the receiver. Read the margin as give or take 10 dB.
-      </p>
-      <h3>Good to know</h3>
-      <ul>
-        <li>
-          The data is a surface model made from satellite images. Buildings and trees are part of the surface, as they
-          stood when the images were taken.
-        </li>
-        <li>
-          Heights are shown above sea level. The archive measures from a smooth reference shape instead, so Sightline
-          corrects it with the EGM96 sea-level model. Expect a metre or so of difference from local maps.
-        </li>
-        <li>
-          The profile is drawn with the Earth's curvature added, so the line of sight is straight. The readout under
-          the chart gives the real ground height.
-        </li>
-        <li>
-          By default the 2 m data is only read where it matters: near both antennas and wherever the ground comes
-          close to a narrow Fresnel zone. Everything else comes from the 10 m data.
-        </li>
-        <li>
-          Red on the chart and the map means the ground is above the line of sight. "Estimate radio link" adds the
-          radio side: pick a band, a radio and an antenna, and it works out whether the link should hold. It also
-          draws the Fresnel zone, the space the signal needs around the line of sight, and marks in amber where the
-          ground comes inside 60% of it ("grazing").
-        </li>
-      </ul>
-      <h3>Credits</h3>
-      <p>
-        DEMs provided by the Polar Geospatial Center under NSF-OPP awards 1043681, 1559691, 1542736, 1810976, and
-        2129685.
-      </p>
-      <p>
-        Porter, Claire, et al., 2023, “ArcticDEM, Version 4.1”,
-        <a href="https://doi.org/10.7910/DVN/3VDC4W" target="_blank" rel="noopener">https://doi.org/10.7910/DVN/3VDC4W</a>, Harvard Dataverse, V1.
-      </p>
-      <p>
-        Repeater details: <a href="https://www.ira.is/endurvarpar/" target="_blank" rel="noopener">ÍRA</a>, with antenna
-        heights and types assumed where they are not published.
-        Map tiles © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors.
-        Satellite pictures: <a href="https://cloudless.eox.at" target="_blank" rel="noopener">EOxCloudless</a> by
-        <a href="https://eox.at" target="_blank" rel="noopener">EOX IT Services GmbH</a> (contains modified Copernicus Sentinel
-        data 2024), CC BY-NC-SA 4.0. Built
-        with Leaflet, geotiff.js and Plotly. Made by <a href="https://tf5nn.github.io/" target="_blank" rel="noopener">TF5NN</a>.
-      </p>
-      <p><a href="how.html">How it works and how far to trust it</a></p>
-      <form method="dialog"><button class="primary">Close</button></form>
+      <h2 data-i18n="about.title">About Sightline</h2>
+      <!-- The same text twice, once in each language. Only the one for the page's language shows. -->
+      <div data-only="en" lang="en">
+        <p>
+          Sightline draws the terrain along the straight path between two points. It reads 2 m elevation data directly
+          from the public ArcticDEM archive, which covers land north of about 60°N. Nothing is stored on a server: your
+          points live only in this page and in its address, which you can copy to share a path.
+        </p>
+        <p>
+          Visits are counted anonymously with GoatCounter: that the page was opened, from which country and which site
+          led here. No cookies, and your points and settings are never sent.
+        </p>
+        <p>
+          The verdict is an estimate from a simple, open model: free-space loss, plus terrain loss worked out two ways
+          (knife-edge diffraction over at most three ridges, and the ITU single-ridge method with its allowance for
+          broad, real terrain), taking the larger. It does not know about reflections, trees that have grown since the images were
+          taken, snow, or noise at the receiver. Read the margin as give or take 10 dB.
+        </p>
+        <h3>Good to know</h3>
+        <ul>
+          <li>
+            The data is a surface model made from satellite images. Buildings and trees are part of the surface, as they
+            stood when the images were taken.
+          </li>
+          <li>
+            Heights are shown above sea level. The archive measures from a smooth reference shape instead, so Sightline
+            corrects it with the EGM96 sea-level model. Expect a metre or so of difference from local maps.
+          </li>
+          <li>
+            The profile is drawn with the Earth's curvature added, so the line of sight is straight. The readout under
+            the chart gives the real ground height.
+          </li>
+          <li>
+            By default the 2 m data is only read where it matters: near both antennas and wherever the ground comes
+            close to a narrow Fresnel zone. Everything else comes from the 10 m data.
+          </li>
+          <li>
+            Red on the chart and the map means the ground is above the line of sight. "Estimate radio link" adds the
+            radio side: pick a band, a radio and an antenna, and it works out whether the link should hold. It also
+            draws the Fresnel zone, the space the signal needs around the line of sight, and marks in amber where the
+            ground comes inside 60% of it ("grazing").
+          </li>
+        </ul>
+        <h3>Credits</h3>
+        <p>
+          DEMs provided by the Polar Geospatial Center under NSF-OPP awards 1043681, 1559691, 1542736, 1810976, and
+          2129685.
+        </p>
+        <p>
+          Porter, Claire, et al., 2023, “ArcticDEM, Version 4.1”,
+          <a href="https://doi.org/10.7910/DVN/3VDC4W" target="_blank" rel="noopener">https://doi.org/10.7910/DVN/3VDC4W</a>, Harvard Dataverse, V1.
+        </p>
+        <p>
+          Repeater details: <a href="https://www.ira.is/endurvarpar/" target="_blank" rel="noopener">ÍRA</a>, with antenna
+          heights and types assumed where they are not published.
+          Map tiles © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors.
+          Satellite pictures: <a href="https://cloudless.eox.at" target="_blank" rel="noopener">EOxCloudless</a> by
+          <a href="https://eox.at" target="_blank" rel="noopener">EOX IT Services GmbH</a> (contains modified Copernicus Sentinel
+          data 2024), CC BY-NC-SA 4.0. Built
+          with Leaflet, geotiff.js and Plotly. Made by <a href="https://tf5nn.github.io/" target="_blank" rel="noopener">TF5NN</a>.
+        </p>
+        <p><a href="how.html">How it works and how far to trust it</a></p>
+      </div>
+      <div data-only="is" lang="is">
+        <p>
+          Sightline teiknar landið eftir beinni línu milli tveggja punkta. Það les 2 m hæðargögn beint úr opnu
+          ArcticDEM-safni, sem nær yfir land norðan við um 60°N. Ekkert er geymt á netþjóni: punktarnir þínir eru
+          aðeins á þessari síðu og í veffangi hennar, sem þú getur afritað til að deila leið.
+        </p>
+        <p>
+          Heimsóknir eru taldar nafnlaust með GoatCounter: að síðan var opnuð, frá hvaða landi og hvaða síða vísaði
+          hingað. Engar vafrakökur, og punktarnir þínir og stillingar eru aldrei sendar.
+        </p>
+        <p>
+          Niðurstaðan er mat úr einföldu, opnu líkani: fjarlægðardeyfing, auk landslagsdeyfingar sem er reiknuð á
+          tvo vegu (bognun yfir hnífsegg, yfir allt að þrjá hryggi, og eins-hryggs aðferð ITU með viðbót fyrir breitt,
+          raunverulegt landslag) og stærri talan notuð. Það veit ekki um endurkast, tré sem hafa vaxið síðan myndirnar
+          voru teknar, snjó eða truflanir við viðtækið. Taktu svigrúmið sem plús eða mínus 10 dB.
+        </p>
+        <h3>Gott að vita</h3>
+        <ul>
+          <li>
+            Gögnin eru yfirborðslíkan gert úr gervihnattamyndum. Byggingar og tré eru hluti af yfirborðinu, eins og
+            þau stóðu þegar myndirnar voru teknar.
+          </li>
+          <li>
+            Hæðir eru sýndar yfir sjávarmáli. Safnið mælir frá sléttu viðmiðunarformi í staðinn, svo Sightline leiðréttir
+            það með EGM96-sjávarmálslíkaninu. Búast má við um metra mun frá staðbundnum kortum.
+          </li>
+          <li>
+            Sniðið er teiknað með sveigju jarðar, svo sjónlínan er bein. Aflesturinn undir grafinu gefur raunverulega
+            landhæð.
+          </li>
+          <li>
+            Sjálfgefið eru 2 m gögnin aðeins lesin þar sem þau skipta máli: nálægt báðum loftnetum og hvar sem landið
+            kemur nærri mjóu Fresnel-svæði. Allt annað kemur úr 10 m gögnunum.
+          </li>
+          <li>
+            Rautt á grafinu og kortinu þýðir að landið er fyrir ofan sjónlínuna. „Meta radíósamband“ bætir radíóhliðinni
+            við: veldu tíðnisvið, tæki og loftnet, og það reiknar hvort sambandið ætti að halda. Það teiknar líka
+            Fresnel-svæðið, rýmið sem merkið þarf í kringum sjónlínuna, og merkir með gulu þar sem landið kemur inn fyrir
+            60% af því („of nærri“).
+          </li>
+        </ul>
+        <h3>Heimildir og þakkir</h3>
+        <p>
+          DEMs provided by the Polar Geospatial Center under NSF-OPP awards 1043681, 1559691, 1542736, 1810976, and
+          2129685.
+        </p>
+        <p>
+          Porter, Claire, et al., 2023, “ArcticDEM, Version 4.1”,
+          <a href="https://doi.org/10.7910/DVN/3VDC4W" target="_blank" rel="noopener">https://doi.org/10.7910/DVN/3VDC4W</a>, Harvard Dataverse, V1.
+        </p>
+        <p>
+          Upplýsingar um endurvarpa: <a href="https://www.ira.is/endurvarpar/" target="_blank" rel="noopener">ÍRA</a>, en
+          loftnetshæðir og -gerðir eru ágiskaðar þar sem þær hafa ekki verið birtar.
+          Kortagrunnur © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> og þátttakendur.
+          Loftmyndir: <a href="https://cloudless.eox.at" target="_blank" rel="noopener">EOxCloudless</a> frá
+          <a href="https://eox.at" target="_blank" rel="noopener">EOX IT Services GmbH</a> (contains modified Copernicus Sentinel
+          data 2024), CC BY-NC-SA 4.0. Smíðað
+          með Leaflet, geotiff.js og Plotly. Gert af <a href="https://tf5nn.github.io/is/" target="_blank" rel="noopener">TF5NN</a>.
+        </p>
+        <p><a href="how.html">Hvernig það virkar og hve vel má treysta því</a></p>
+      </div>
+      <form method="dialog"><button class="primary" data-i18n="about.close">Close</button></form>
     </dialog>
 
     <script src="vendor/leaflet/leaflet.js"></script>

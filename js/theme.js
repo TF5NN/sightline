@@ -8,6 +8,10 @@
 (function () {
   var KEY = 'tf5nn-theme';
   var device = window.matchMedia('(prefers-color-scheme: dark)');
+  var WORDS = {
+    en: { toDark: 'Switch to the dark theme', toLight: 'Switch to the light theme' },
+    is: { toDark: 'Skipta yfir í dökkt útlit', toLight: 'Skipta yfir í ljóst útlit' },
+  };
 
   function chosen() {
     try {
@@ -27,10 +31,12 @@
     // The colour a phone's browser gives its own bars around the page.
     var bar = document.querySelector('meta[name="theme-color"]');
     if (bar) bar.setAttribute('content', theme === 'dark' ? '#0f1917' : '#214e3a');
-    var other = theme === 'dark' ? 'light' : 'dark';
+    // The button's label, in the page's language (js/lang.js sets it).
+    var words = WORDS[document.documentElement.lang] || WORDS.en;
+    var label = theme === 'dark' ? words.toLight : words.toDark;
     document.querySelectorAll('.theme-toggle').forEach(function (button) {
-      button.setAttribute('aria-label', 'Switch to the ' + other + ' theme');
-      button.title = 'Switch to the ' + other + ' theme';
+      button.setAttribute('aria-label', label);
+      button.title = label;
     });
     // Drawings that take their colours in script (the chart) listen for this and redraw.
     if (changed) document.dispatchEvent(new CustomEvent('themechange', { detail: theme }));
@@ -38,6 +44,7 @@
 
   apply();
   device.addEventListener('change', apply);
+  document.addEventListener('langchange', apply);
   document.addEventListener('DOMContentLoaded', function () {
     apply();
     document.querySelectorAll('.theme-toggle').forEach(function (button) {

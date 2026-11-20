@@ -6,6 +6,8 @@
 // and the page is told which sample is under it. On a touch screen the line
 // stays where the finger left it.
 
+import { t } from './i18n.js';
+
 // The chart's colours are the page's named shades (css/style.css), read each time it is drawn so
 // that it follows the light or dark theme. The values here are used where there is no page.
 const FALLBACK = { ink: '#203b3d', line: '#dfe5de', green: '#267c62', path: '#2f6fb7', bad: '#c0392b', marginal: '#d98a00' };
@@ -163,7 +165,7 @@ export function drawProfile(Plotly, element, view, { onHover, onLeave } = {}) {
     hovermode: false,
     dragmode: false,
     xaxis: {
-      title: { text: 'Distance from A (km)', standoff: compact ? 6 : 10 },
+      title: { text: t('chart.distance'), standoff: compact ? 6 : 10 },
       range: [0, view.km[n - 1]],
       gridcolor: shade('line'),
       zeroline: false,
@@ -171,7 +173,7 @@ export function drawProfile(Plotly, element, view, { onHover, onLeave } = {}) {
       nticks: compact ? 6 : 12,
     },
     yaxis: {
-      title: compact ? undefined : { text: 'Height (m)' },
+      title: compact ? undefined : { text: t('chart.height') },
       range: [floor, ceiling + pad],
       gridcolor: shade('line'),
       zeroline: false,

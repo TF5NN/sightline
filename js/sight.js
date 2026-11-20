@@ -9,6 +9,7 @@
 // high and the estimate errs slightly on the careful side. Against the same
 // estimate on the full 10 m data it is typically within a decibel or two.
 
+import { t } from './i18n.js';
 import { STANDARD_K, linkEstimate } from './radio.js';
 import { resolveRadio } from './settings.js';
 import { settingsWithStation } from './stations.js';
@@ -100,18 +101,9 @@ const km = (metres) => (metres < 9950 ? `${(metres / 1000).toFixed(1)} km` : `${
  */
 export function estimateWords(e) {
   const margin = Math.round(Math.abs(e.marginDb));
-  const over = `over ${km(e.distanceMetres)}`;
-  const first =
-    e.kind === 'good'
-      ? `Should work from A: about ${margin} dB to spare ${over}.`
-      : e.kind === 'marginal'
-        ? `Marginal from A: only about ${margin} dB to spare ${over}.`
-        : `Unlikely from A: about ${margin} dB short ${over}.`;
+  const distance = km(e.distanceMetres);
+  const first = t(e.kind === 'good' ? 'estimate.good' : e.kind === 'marginal' ? 'estimate.marginal' : 'estimate.unlikely', { margin, distance });
   const loss = Math.round(e.terrainLossDb);
-  const second = !e.lineOfSight
-    ? `No line of sight: the signal has to bend over the terrain, which costs about ${loss} dB.`
-    : loss >= 1
-      ? `Line of sight, but the ground comes close to it and costs about ${loss} dB.`
-      : 'Clear line of sight.';
+  const second = t(!e.lineOfSight ? 'estimate.blocked' : loss >= 1 ? 'estimate.close' : 'estimate.clear', { loss });
   return `${first} ${second}`;
 }

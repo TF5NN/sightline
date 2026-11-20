@@ -63,7 +63,9 @@ import {
   stationLabel,
   settingsWithStation,
   stationLayers,
+  layerName,
 } from './stations.js';
+import { count as fmtCount, lang, named, t } from './i18n.js';
 import { createLookAround } from './lookaround.js';
 import { LAYERS_URL, SAME_SPOT, bestOf, estimateLink, estimateWords, openLayers } from './sight.js';
 import { ownDraft } from './owndraft.js';
@@ -169,7 +171,19 @@ const backgrounds = {
 };
 let background = 'map';
 backgrounds.map.addTo(map);
-const layersControl = L.control.layers({ Map: backgrounds.map, Satellite: backgrounds.sat }, null, { position: 'topright' }).addTo(map);
+// The layers button. Its names are in the page's language, so it is built again when that changes.
+const overlays = []; // [{ id, group }] the station layers, in order
+let layersControl = null;
+function buildLayersControl() {
+  layersControl?.remove();
+  layersControl = L.control.layers(
+    { [t('map.background.map')]: backgrounds.map, [t('map.background.sat')]: backgrounds.sat },
+    null,
+    { position: 'topright' },
+  ).addTo(map);
+  for (const { id, group } of overlays) layersControl.addOverlay(group, layerName(id));
+}
+buildLayersControl();
 function showBackground(name) {
   background = backgrounds[name] ? name : 'map';
   for (const [key, layer] of Object.entries(backgrounds)) {
@@ -281,7 +295,7 @@ function syncMarkers() {
 
 map.on('click', (event) => {
   if (state.waypoints.length >= 2) {
-    setStatus('Both points are placed. Drag one to move it, or press Clear to start again.');
+    setStatus(() => t('status.bothPlaced'));
     return;
   }
   state.waypoints.push({ lat: event.latlng.lat, lon: event.latlng.lng });
@@ -339,7 +353,7 @@ function stationCard(station) {
   title.textContent = [station.callsign, station.name].filter(Boolean).join(' ');
   const kind = document.createElement('p');
   kind.className = 'kind';
-  kind.textContent = [stationKind(station), station.status].filter(Boolean).join(' · ');
+  kind.textContent = [stationKind(station), station.status && named(`status.${station.status}`, station.status)].filter(Boolean).join(' · ');
   box.append(title, kind);
   const seen = sightFromA.stations.get(station.id);
   if (seen) {
@@ -357,17 +371,23 @@ function stationCard(station) {
     dial.append(...frequencies.map((part) => detailLine(part.label, part.value)));
     box.append(dial);
   }
-  const guess = (key) => (station.assumed.includes(key) ? '(assumed)' : '');
+  const guess = (key) => (station.assumed.includes(key) ? t('station.assumed') : '');
   box.append(
-    detailLine('Power', `${station.powerW} W`, guess('powerW')),
-    detailLine('Antenna', `${station.antenna ? `${station.antenna}, ` : ''}${station.gainDbi} dBi`, guess('gainDbi')),
-    detailLine('Height', `${station.heightM} m above ground`, guess('heightM')),
+    detailLine(t('station.power'), `${station.powerW} W`, guess('powerW')),
+    detailLine(t('station.antenna'), `${station.antenna ? `${station.antenna}, ` : ''}${station.gainDbi} dBi`, guess('gainDbi')),
+    detailLine(t('station.height'), t('station.heightValue', { height: station.heightM }), guess('heightM')),
   );
-  if (station.confidence) box.append(detailLine('Position', `${station.confidence} confidence`));
-  if (station.notes) {
+  if (station.confidence) {
+    const confidence = named(`confidence.${station.confidence}`, station.confidence);
+    box.append(detailLine(t('station.position'), t('station.confidence', { confidence })));
+  }
+  // The sheet's notes, in Icelandic too where the sheet has them (the notes_is column).
+  const notesText = (lang() === 'is' && station.notesIs) || station.notes;
+  if (notesText) {
     const notes = document.createElement('p');
     notes.className = 'notes';
-    notes.textContent = station.notes;
+    notes.textContent = notesText;
+    if (notesText !== station.notesIs) notes.lang = 'en';
     box.append(notes);
   }
 
@@ -378,7 +398,7 @@ function stationCard(station) {
   for (const index of ends) {
     const button = document.createElement('button');
     button.type = 'button';
-    button.textContent = `Use as ${LABELS[index]}`;
+    button.textContent = t('station.use', { end: LABELS[index] });
     button.dataset.end = LABELS[index].toLowerCase();
     button.addEventListener('click', () => {
       map.closePopup();
@@ -485,13 +505,12 @@ const lookAround = createLookAround(el.lookView, el.lookFacing);
 async function openLookAround() {
   const [a, b] = state.waypoints;
   if (!a) return;
-  const words = el.look.textContent;
   el.look.disabled = true;
-  el.look.textContent = 'Reading terrain…';
+  el.look.textContent = t('look.reading');
   try {
     const layers = await openLayers(layersUrl);
     if (!(await layers.covers(a.lat, a.lon))) {
-      setStatus('Look around works on land in Iceland only, and point A is outside it.', true);
+      setStatus(() => t('status.lookOutside'), true);
       return;
     }
     const from = { lat: a.lat, lon: a.lon, antennaMetres: state.settings.a.height };
@@ -520,9 +539,9 @@ async function openLookAround() {
     el.lookDialog.showModal();
   } catch (error) {
     console.warn('Could not open the look-around view', error);
-    setStatus('The terrain for the look-around view could not be loaded. Check the connection and try again.', true);
+    setStatus(() => t('status.lookFailed'), true);
   } finally {
-    el.look.textContent = words;
+    el.look.textContent = t('map.look');
     el.look.disabled = state.waypoints.length === 0;
   }
 }
@@ -574,6 +593,7 @@ async function loadStations() {
         sites.push({ layer: layer.id, marker, stations: here });
       }
       stationGroups.set(layer.id, group);
+      overlays.push({ id: layer.id, group });
       layersControl.addOverlay(group, layer.name);
     }
     showLayers(state.layersWanted);
@@ -628,18 +648,22 @@ function readAddress() {
 
 // --- small helpers -------------------------------------------------------------
 
-function setStatus(text, problem = false) {
-  el.status.textContent = text;
+// The message under the profile. It is given as a little function that writes the words, so it
+// can be written again in the other language when the EN / IS switch is pressed.
+let statusWords = () => '';
+function setStatus(words, problem = false) {
+  statusWords = typeof words === 'function' ? words : () => words;
+  el.status.textContent = statusWords();
   el.status.classList.toggle('problem', problem);
 }
 
 const fmtDistance = (m) => (m < 1000 ? `${m.toFixed(0)} m` : `${(m / 1000).toFixed(2)} km`);
-const fmtHeight = (h) => (Number.isFinite(h) ? `${Math.round(h)} m` : 'no data');
+const fmtHeight = (h) => (Number.isFinite(h) ? `${Math.round(h)} m` : t('readout.noData'));
 const fmtMB = (bytes) => `${(bytes / 1e6).toFixed(bytes < 10e6 ? 1 : 0)} MB`;
 const fmtDb = (db) => `${db.toFixed(1)} dB`;
 const signed = (n, digits = 1) => `${n >= 0 ? '+' : '−'}${Math.abs(n).toFixed(digits)}`;
 const isCancel = (error) => error?.name === 'AbortError' || /abort/i.test(String(error?.message ?? ''));
-const SOURCE_WORDS = { [FROM_10M]: '10 m data', [FROM_2M]: '2 m data', [FROM_FILL]: 'filled from coarser data' };
+const SOURCE_WORDS = { [FROM_10M]: 'source.10m', [FROM_2M]: 'source.2m', [FROM_FILL]: 'source.fill' };
 
 const radioFromSettings = () => resolveRadio(state.settings);
 
@@ -691,15 +715,15 @@ function render() {
       if (index >= n) return;
       el.readout.classList.remove('idle');
       hoverDot.setLatLng([track.lat[index], track.lon[index]]).addTo(map);
-      let text = `${fmtDistance(track.distance[index])} from A · ground ${fmtHeight(ground[index])}`;
+      let text = t('readout.at', { distance: fmtDistance(track.distance[index]), height: fmtHeight(ground[index]) });
       if (link && index > 0 && index < n - 1 && Number.isFinite(ground[index])) {
         const c = link.path.clearance[index];
-        text += c >= 0 ? ` · ${c.toFixed(0)} m below the line of sight` : ` · ${(-c).toFixed(0)} m above the line of sight`;
+        text += c >= 0 ? t('readout.below', { metres: c.toFixed(0) }) : t('readout.above', { metres: (-c).toFixed(0) });
         if (showFresnel && c >= 0 && link.path.fresnel[index] > 0) {
-          text += ` (${((c / link.path.fresnel[index]) * 100).toFixed(0)}% of the Fresnel radius)`;
+          text += t('readout.fresnel', { percent: ((c / link.path.fresnel[index]) * 100).toFixed(0) });
         }
       }
-      if (SOURCE_WORDS[track.source[index]]) text += ` · ${SOURCE_WORDS[track.source[index]]}`;
+      if (SOURCE_WORDS[track.source[index]]) text += ` · ${t(SOURCE_WORDS[track.source[index]])}`;
       el.readout.textContent = text;
     },
     onLeave: () => {
@@ -717,9 +741,7 @@ const fingers = globalThis.matchMedia?.('(pointer: coarse)').matches;
 /** Nothing is being read off the profile: say how to. */
 function idleReadout() {
   el.readout.classList.add('idle');
-  el.readout.textContent = fingers
-    ? 'Slide a finger along the profile to read the heights.'
-    : 'Move the pointer along the profile to read the heights.';
+  el.readout.textContent = fingers ? t('readout.finger') : t('readout.pointer');
 }
 
 /** Fill in the radio link panel (it may be closed; the numbers are kept ready either way). */
@@ -732,7 +754,7 @@ function showLinkResults() {
   };
   if (!shown) {
     blank();
-    el.linkNote.textContent = 'Place two points on the map to get an estimate.';
+    el.linkNote.textContent = t('note.place');
     return;
   }
   const { track, link } = shown;
@@ -742,7 +764,7 @@ function showLinkResults() {
     return;
   }
   $('r-distance').textContent = fmtDistance(track.total);
-  $('r-verdict').textContent = link.verdict.word;
+  $('r-verdict').textContent = named(`verdict.${link.verdict.key}`, link.verdict.word);
   el.verdictBox.classList.add(link.verdict.key);
   $('r-margin').textContent = `${signed(link.margin)} dB`;
   $('r-received').textContent = `${signed(link.received)} dBm`;
@@ -750,22 +772,22 @@ function showLinkResults() {
   const edges = link.diffraction.edges.length;
   $('r-diffraction').textContent =
     link.terrainLoss === 0
-      ? 'none'
+      ? t('result.none')
       : link.terrainMethod === 'edges'
-        ? `${fmtDb(link.terrainLoss)}, ${edges} edge${edges > 1 ? 's' : ''}`
+        ? t(edges > 1 ? 'result.edges' : 'result.edge', { loss: fmtDb(link.terrainLoss), count: edges })
         : fmtDb(link.terrainLoss);
 
   const notes = [];
   if (link.oneWay) {
-    notes.push(`One way only, ${link.oneWay === 'aToB' ? 'A to B' : 'B to A'}: the other end only receives.`);
+    notes.push(t('note.oneWay', { direction: t(link.oneWay === 'aToB' ? 'dir.aToB' : 'dir.bToA') }));
   }
   if (link.twoWayDiffers) {
-    const [weak, other] = link.weaker === 'aToB' ? ['A to B', link.bToA] : ['B to A', link.aToB];
-    notes.push(`Judged on the weaker direction, ${weak}. The other way has ${fmtDb(other.margin - link.margin)} more to spare.`);
+    const [weak, other] = link.weaker === 'aToB' ? [t('dir.aToB'), link.bToA] : [t('dir.bToA'), link.aToB];
+    notes.push(t('note.weaker', { direction: weak, spare: fmtDb(other.margin - link.margin) }));
   }
   if (link.terrainMethod === 'allowance') {
     const b = link.bullington;
-    notes.push(`Terrain loss is ${fmtDb(b.knifeEdge)} over the ridge plus ${fmtDb(b.allowance)} allowance for broad, real terrain.`);
+    notes.push(t('note.allowance', { ridge: fmtDb(b.knifeEdge), allowance: fmtDb(b.allowance) }));
   }
   el.linkNote.textContent = notes.join(' ');
 }
@@ -785,10 +807,7 @@ function hideProfile() {
 }
 
 function explainNoData(problems) {
-  if (problems.blocked > 0) {
-    return 'Could not reach the terrain data. Check your connection and try again. If it keeps happening, run the data connection test linked at the bottom of the page.';
-  }
-  return 'No terrain data on this path. ArcticDEM covers land north of about 60°N.';
+  return t(problems.blocked > 0 ? 'status.noReach' : 'status.noData');
 }
 
 function dataSummary() {
@@ -797,14 +816,20 @@ function dataSummary() {
   const fine = count(FROM_2M);
   const filled = count(FROM_FILL);
   const covered = mergeStretches(state.stretches.map((s) => [s.from, s.to])).reduce((sum, [f, t]) => sum + (t - f), 0);
-  let text = `${track.distance.length.toLocaleString('en')} samples`;
-  if (fine > 0) text += `, 2 m data on ${fmtDistance(covered)} of the path`;
-  else text += ', 10 m data';
-  if (filled > 0) text += `, ${filled.toLocaleString('en')} filled from coarser data`;
+  let text = t('summary.samples', { count: fmtCount(track.distance.length) });
+  if (fine > 0) text += t('summary.fine', { distance: fmtDistance(covered) });
+  else text += t('summary.coarse');
+  if (filled > 0) text += t('summary.filled', { count: fmtCount(filled) });
   return text;
 }
 
 // --- the main sequence -----------------------------------------------------------
+
+/** Above the profile: what to do next. */
+function showHint() {
+  el.hint.hidden = state.waypoints.length >= 2;
+  el.hint.textContent = t(state.waypoints.length === 1 ? 'hint.placeB' : 'hint.start');
+}
 
 /** The waypoints changed: forget the old terrain and start over. */
 function pathChanged() {
@@ -813,11 +838,7 @@ function pathChanged() {
   el.swap.disabled = state.waypoints.length < 2;
   el.clear.disabled = state.waypoints.length === 0;
   el.look.disabled = state.waypoints.length === 0;
-  el.hint.hidden = state.waypoints.length >= 2;
-  if (state.waypoints.length === 1) el.hint.textContent = 'Now tap the map to place point B.';
-  if (state.waypoints.length === 0) {
-    el.hint.textContent = 'Tap the map to place point A, then point B. Drag a point to move it.';
-  }
+  showHint();
   state.draft = null;
   state.stretches = [];
   state.approved = false;
@@ -846,14 +867,14 @@ async function update() {
   const stillCurrent = () => run === state.run;
 
   if (geodesicDistance(a, b) < 20) {
-    setStatus('The two points are almost on top of each other. Drag one of them further away.', true);
+    setStatus(() => t('status.tooClose'), true);
     return;
   }
 
   try {
     // 1. Draft from the 10 m layer (only when the path itself changed).
     if (!state.draft) {
-      setStatus('Reading the 10 m draft…');
+      setStatus(() => t('status.draft'));
       // In Iceland the draft comes from the shared terrain layers: the same 10 m data in much
       // smaller pieces. Anywhere else, or if they cannot be reached, it is read from ArcticDEM.
       let draft = null;
@@ -889,20 +910,20 @@ async function update() {
         if (coarse.problems.blocked > 0) draft.problems.blocked += coarse.problems.blocked;
       }
       if (!heightRange(draft.heights)) {
-        setStatus(explainNoData(draft.problems), true);
+        setStatus(() => explainNoData(draft.problems), true);
         return;
       }
       state.draft = draft;
     }
     render();
     if (!state.shown.link) {
-      setStatus('There is no terrain data under one of the two points, so the link cannot be worked out.', true);
+      setStatus(() => t('status.noEnds'), true);
       return;
     }
 
     // 2 and 3. Load 2 m data where it matters, then look again.
     if (state.settings.detail === '10m') {
-      setStatus(`Done, on 10 m data only. ${dataSummary()}.`);
+      setStatus(() => t('status.done10m', { summary: dataSummary() }));
       return;
     }
     for (let pass = 0; pass < DETAIL_PASSES; pass++) {
@@ -919,27 +940,28 @@ async function update() {
       const sets = missing.map(([from, to]) => stretchSamples(a, b, track.total, from, to, spacing));
       const grid = sets.flatMap((s) => s.grid);
 
-      if (pass === 0) setStatus('Checking the size of the 2 m detail…');
+      if (pass === 0) setStatus(() => t('status.checking'));
       const cost = await terrain.estimate('2m', grid);
       if (!stillCurrent()) return;
       if (cost.blocks === 0) {
-        setStatus(`Done. There is no 2 m data on this path. ${dataSummary()}.`);
+        setStatus(() => t('status.no2m', { summary: dataSummary() }));
         return;
       }
       if (cost.bytesToFetch > AUTO_DETAIL_BYTES && !state.approved) {
-        const size = `about ${fmtMB(cost.bytesToFetch)}`;
+        const size = () => t('status.about', { size: fmtMB(cost.bytesToFetch) });
         state.pending = true;
-        el.loadDetail.textContent = `Load 2 m detail (${size})`;
+        state.pendingSize = size;
+        el.loadDetail.textContent = t('detail.loadSize', { size: size() });
         el.loadDetail.hidden = false;
-        setStatus(`Showing the result so far. The 2 m detail for this path is a larger download: ${size}.`);
+        setStatus(() => t('status.large', { size: size() }));
         return;
       }
 
-      setStatus('Loading 2 m detail…');
+      setStatus(() => t('status.loading'));
       const result = await terrain.sample('2m', grid, {
         signal: controller.signal,
         onProgress: (done, total) => {
-          if (stillCurrent()) setStatus(`Loading 2 m detail… ${done} of ${total} blocks`);
+          if (stillCurrent()) setStatus(() => t('status.loadingBlocks', { done, total }));
         },
       });
       if (!stillCurrent()) return;
@@ -958,12 +980,12 @@ async function update() {
       }
       render();
     }
-    setStatus(`Done. ${dataSummary()}.`);
+    setStatus(() => t('status.done', { summary: dataSummary() }));
   } catch (error) {
     if (isCancel(error) || !stillCurrent()) return;
     console.error(error);
-    const what = state.draft ? 'The result so far is still shown.' : '';
-    setStatus(`Something went wrong while reading the terrain: ${error.message ?? error}. ${what}`, true);
+    const shown = Boolean(state.draft);
+    setStatus(() => t('status.failed', { error: error.message ?? error, more: shown ? t('status.soFar') : '' }).trim(), true);
   }
 }
 
@@ -983,7 +1005,7 @@ function fillSelect(select, entries, value) {
   select.value = value;
 }
 
-const antennaLabel = (a) => `${a.label} (${a.gain > 0 ? '+' : a.gain < 0 ? '−' : ''}${Math.abs(a.gain)} dBi)`;
+const antennaLabel = (id, a) => `${named(`antenna.${id}`, a.label)} (${a.gain > 0 ? '+' : a.gain < 0 ? '−' : ''}${Math.abs(a.gain)} dBi)`;
 const showPower = (watts) =>
   state.settings.powerUnit === 'W' ? roundTo(watts, 4) : watts > 0 ? roundTo(wattsToDbm(watts), 1) : '';
 
@@ -996,26 +1018,24 @@ function showSettings() {
   $('height-b').value = roundTo(s.b.height, 2);
 
   el.linkPanel.hidden = !s.linkOpen;
-  el.linkToggle.textContent = s.linkOpen ? 'Hide radio link' : 'Estimate radio link';
+  el.linkToggle.textContent = t(s.linkOpen ? 'link.hide' : 'link.open');
   el.linkToggle.setAttribute('aria-expanded', String(s.linkOpen));
   el.linkToggle.classList.toggle('primary', !s.linkOpen);
 
-  fillSelect($('band'), Object.entries(BANDS).map(([id, b]) => [id, b.label]), s.band);
-  const radios = radiosFor(s.band).map(([id, r]) => [id, r.label]);
-  const antennas = antennasFor(s.band).map(([id, a]) => [id, antennaLabel(a)]);
+  fillSelect($('band'), Object.entries(BANDS).map(([id, b]) => [id, named(`band.${id}`, b.label)]), s.band);
+  const radios = radiosFor(s.band).map(([id, r]) => [id, named(`radio.${id}`, r.label)]);
+  const antennas = antennasFor(s.band).map(([id, a]) => [id, antennaLabel(id, a)]);
   fillSelect($('radio-a'), radios, s.a.radio);
   fillSelect($('antenna-a'), antennas, s.a.antenna);
   fillSelect($('radio-b'), radios, s.b.radio);
   fillSelect($('antenna-b'), antennas, s.b.antenna);
   $('split').checked = s.split;
   $('fresnel').checked = s.fresnel;
-  $('radio-a-label').textContent = s.split ? 'Radio at A' : 'Radio';
-  $('antenna-a-label').textContent = s.split ? 'Antenna at A' : 'Antenna';
+  $('radio-a-label').textContent = t(s.split ? 'field.radioA' : 'field.radio');
+  $('antenna-a-label').textContent = t(s.split ? 'field.antennaA' : 'field.antenna');
   for (const node of document.querySelectorAll('.split-only')) node.hidden = !s.split;
-  for (const node of document.querySelectorAll('.a-word')) {
-    const base = node.textContent.replace(/ at A$/, '');
-    node.textContent = s.split ? `${base} at A` : base;
-  }
+  // "Transmit power", or "Transmit power at A" when the two ends differ.
+  for (const node of document.querySelectorAll('.a-word')) node.textContent = t(s.split ? `${node.dataset.word}A` : node.dataset.word);
 
   // Advanced: the figures in use, whether they came from the lists or were typed by hand.
   const values = {
@@ -1045,9 +1065,7 @@ function showSettings() {
   }
   $('sens-a').disabled = lora;
   $('sens-b').disabled = lora;
-  el.sensNote.textContent = lora
-    ? 'For LoRa the sensitivity is worked out from the spreading factor and bandwidth. Higher spreading factor or narrower bandwidth hears weaker signals, at the cost of slower messages.'
-    : 'Sensitivity is the weakest signal the receiver can use: −119 dBm is typical for FM, and that is "just readable", not comfortable.';
+  el.sensNote.textContent = t(lora ? 'sens.lora' : 'sens.fm');
 }
 
 let settingsTimer = null;
@@ -1206,7 +1224,7 @@ function shareSaid(text) {
   el.share.textContent = text;
   clearTimeout(shareTimer);
   shareTimer = setTimeout(() => {
-    el.share.textContent = 'Share';
+    el.share.textContent = t('map.share');
   }, 2500);
 }
 el.share.addEventListener('click', async () => {
@@ -1215,7 +1233,7 @@ el.share.addEventListener('click', async () => {
   // Phones have their own share sheet (messages, mail, ...). Elsewhere the link is copied.
   if (fingers && navigator.share) {
     try {
-      await navigator.share({ title: 'Sightline', text: 'A path in Sightline', url });
+      await navigator.share({ title: 'Sightline', text: t('share.text'), url });
       return;
     } catch (error) {
       if (error?.name === 'AbortError') return; // closed the share sheet: nothing to do
@@ -1223,9 +1241,9 @@ el.share.addEventListener('click', async () => {
   }
   try {
     await navigator.clipboard.writeText(url);
-    shareSaid('Link copied');
+    shareSaid(t('share.copied'));
   } catch {
-    shareSaid('Copy the address bar');
+    shareSaid(t('share.manual'));
   }
 });
 
@@ -1247,10 +1265,10 @@ el.swap.addEventListener('click', () => {
 
 el.locate.addEventListener('click', () => {
   if (!navigator.geolocation) {
-    setStatus('This browser cannot share its location.', true);
+    setStatus(() => t('status.noGeo'), true);
     return;
   }
-  setStatus('Finding your location…');
+  setStatus(() => t('status.finding'));
   navigator.geolocation.getCurrentPosition(
     (position) => {
       const here = { lat: position.coords.latitude, lon: position.coords.longitude };
@@ -1260,7 +1278,7 @@ el.locate.addEventListener('click', () => {
       map.setView([here.lat, here.lon], Math.max(map.getZoom(), 11));
       pathChanged();
     },
-    (error) => setStatus(`Could not get your location (${error.message}).`, true),
+    (error) => setStatus(() => t('status.geoFailed', { error: error.message }), true),
     { enableHighAccuracy: true, timeout: 15000 },
   );
 });
@@ -1315,6 +1333,26 @@ loadStations();
 // The chart takes its colours in script, so it is drawn again when the theme changes.
 document.addEventListener('themechange', () => {
   if (state.shown) render();
+});
+
+// The EN / IS switch was pressed. js/i18n.js has already changed the fixed text; this writes
+// again everything the script put on the page itself, without loading anything again.
+document.addEventListener('langchange', () => {
+  map.closePopup(); // a station's card is in the old language; tapping the station again opens a new one
+  buildLayersControl();
+  showHint();
+  showStationsLine();
+  showSettings();
+  if (state.shown && state.draft) render();
+  else showLinkResults();
+  if (!el.loadDetail.hidden && state.pendingSize) el.loadDetail.textContent = t('detail.loadSize', { size: state.pendingSize() });
+  if (!el.look.disabled) el.look.textContent = t('map.look');
+  try {
+    el.status.textContent = statusWords();
+  } catch (error) {
+    // The message was about a result that has since gone: the next step writes a new one.
+  }
+  lookAround.refresh();
 });
 
 globalThis.sightline = { state, terrain, map, sightFromA };
