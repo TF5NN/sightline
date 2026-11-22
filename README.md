@@ -90,8 +90,9 @@ counter is told a fixed path (`/sightline/`), so the points and settings in the
 page address are never sent. It loads separately from the app, so Sightline
 works the same if it is blocked. Local previews are not counted. To leave your
 own visits out, open the app once with `#toggle-goatcounter` at the end of the
-address in each browser you use. The stylesheet loads DM Sans and IBM Plex Mono
-from Google Fonts, with local fallback fonts; the map pictures come from
+address in each browser you use. The fonts (DM Sans and IBM Plex Mono, free under
+the SIL Open Font License) are files in `fonts/`, served with the app, so nothing
+is fetched from Google; the map pictures come from
 OpenStreetMap, and the optional satellite pictures from EOX (EOxCloudless,
 Sentinel-2, CC BY-NC-SA 4.0: free for non-commercial use with credit).
 

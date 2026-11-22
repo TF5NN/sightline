@@ -22,16 +22,6 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 TILES = os.path.join(ROOT, "test", "tiles")
 OUT = os.path.join(ROOT, "test", "ui", "out")
 
-# The page's fonts come from Google Fonts, which a test machine may not reach; then the browser
-# falls back to Arial and widths are slightly off. Point SIGHTLINE_FONTS at a folder holding
-# node_modules/@fontsource-variable/dm-sans and node_modules/@fontsource/ibm-plex-mono
-# (npm install them there) and the real fonts are used instead.
-FONTS = os.environ.get("SIGHTLINE_FONTS")
-FONT_FILES = {
-    "dm-sans.woff2": "node_modules/@fontsource-variable/dm-sans/files/dm-sans-latin-wght-normal.woff2",
-    "plex-400.woff2": "node_modules/@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-400-normal.woff2",
-    "plex-500.woff2": "node_modules/@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-500-normal.woff2",
-}
 FAKE_LAYERS = """
 export async function openTerrain() {
   return {
@@ -46,22 +36,10 @@ export async function openTerrain() {
   };
 }
 """
-FONT_CSS = """
-@font-face { font-family: 'DM Sans'; font-weight: 100 1000; src: url(https://fonts.test/dm-sans.woff2) format('woff2'); }
-@font-face { font-family: 'IBM Plex Mono'; font-weight: 400; src: url(https://fonts.test/plex-400.woff2) format('woff2'); }
-@font-face { font-family: 'IBM Plex Mono'; font-weight: 500; src: url(https://fonts.test/plex-500.woff2) format('woff2'); }
-"""
-
-
 def use_real_fonts(page):
-    if not FONTS:
-        return
-    cors = {"Access-Control-Allow-Origin": "*"}
-    page.route("https://fonts.googleapis.com/**", lambda route: route.fulfill(content_type="text/css", body=FONT_CSS, headers=cors))
-    page.route(
-        "https://fonts.test/**",
-        lambda route: route.fulfill(path=os.path.join(FONTS, FONT_FILES[route.request.url.rsplit("/", 1)[1]]), content_type="font/woff2", headers=cors),
-    )
+    """Nothing to do any more: the fonts are files in fonts/ and load from the test server
+    like the rest of the app. Kept so older scripts that call it still work."""
+    return
 
 
 class Quiet(http.server.SimpleHTTPRequestHandler):
