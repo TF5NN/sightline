@@ -1,5 +1,6 @@
 /* The same palette, fonts and banner as Northbound and Feedpoint, so the apps feel like one family. */
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+/* The fonts are files in this repo (fonts/), not Google Fonts, so no visitor data goes to Google. */
+@import url('../fonts/fonts.css');
 
 :root {
   /* The named shades shared by Northbound, Sightline and Feedpoint. Northbound's docs/STYLE.md

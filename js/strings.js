@@ -261,7 +261,7 @@ export const STRINGS = {
   'antenna.marinewhip': { en: 'Boat whip antenna', is: 'Stangarloftnet á bát' },
   'antenna.marineht': { en: 'Handheld antenna', is: 'Loftnet á handstöð' },
   'antenna.marinecoast': { en: 'Shore station collinear', is: 'Collinear á strandstöð' },
-  'antenna.wifiomni': { en: 'Omni antenna', is: 'Hringvirkt loftnet' },
+  'antenna.wifiomni': { en: 'Omni antenna', is: 'Alstefnuloftnet' },
   'antenna.wifipanel': { en: 'Panel antenna', is: 'Flatloftnet' },
   'antenna.wifigrid': { en: 'Grid dish', is: 'Grindardiskur' },
   'antenna.wifidish': { en: 'Dish', is: 'Diskur' },
