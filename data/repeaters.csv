@@ -1,0 +1,76 @@
+Network,Site,Ch / Callsign,Type / freq,Status (Oct 2025 maps / ÍRA Feb 2026),Lat (WGS84),Lon (WGS84),Site elev. m (stated or OSM),DEM elev. m (GLO-90),Antenna AGL m,Power / antenna,Solar,Coord confidence,Coord source,Notes
+ÍRA,Skálafell,TF3RPA,"2 m FM 145.600 out / 145.000 in, CTCSS 88.5",Active,64.23889,-21.46472,771,,,25 W,,High,ÍRA website + przemienniki.net,"ÍRA site says 760 m, annual report 771 m. UHF link to TF2RPJ and TF3RPB. Owned by TF3TNT."
+ÍRA,Bláfjöll,TF3RPB,"2 m FM 145.650 out / 145.050 in, CTCSS 88.5",Active,63.97639,-21.635,690,683,,25 W,,High,"ÍRA website (63°58'35""N 21°38'06""W)",Linked on 70 cm (439.975) to TF2RPJ. Owned by TF3TNT.
+ÍRA,Bláfjöll (ISAVIA building),TF3RPI,70 cm D-STAR 439.950 out / 434.950 in,Active per ÍRA site 2 Oct 2026,63.97639,-21.635,690,683,,25 W,,High,Same site as TF3RPB,Annual report noted it out of service in Aug 2025; ÍRA site says active 2 Oct 2026. Internet gateway.
+ÍRA,Bláfjöll,70 cm link,UHF link 439.975 (-7 MHz) to TF2RPJ,Active,63.97639,-21.635,690,683,,,,High,ÍRA website,"RepeaterBook lists this as TF3RPX 'Borgarnes, Myrar'."
+ÍRA,Búrfell (Þjórsárdalur),TF1RPE,"2 m FM 145.700 out / 145.100 in, CTCSS 88.5",Active,64.075,-19.82194,669,,,30 W,,High,"ÍRA website (64°04'30""N 19°49'19""W)",Annual report gives 690 m. Owned by ÍRA.
+ÍRA,Vaðlaheiði,TF5RPD,"2 m FM 145.625 out / 145.025 in, CTCSS 88.5",Active (repaired 2025),65.73028,-18.00722,550,630,,25 W,,High,"ÍRA website (65°43'49""N 18°00'26""W)","DEM at that point reads 630 m, so ÍRA's 550 m may be rounded or for a lower spot. Owned by ÍRA."
+ÍRA,Strútur (Borgarfjörður),TF2RPJ,"2 m FM 145.750 out / 145.150 in, CTCSS 88.5",Active,64.749,-20.6813,937,921,,25 W,,High,OSM summit node (matches ÍRA 937 m),Moved from Álftanes á Mýrum to Strútur in 2025. ÍRA tables still mix the HP84wl and HP84pr locators; HP84pr fits Strútur.
+ÍRA,Þrándarhlíðarfjall (Skagafjörður),TF5RPG,"2 m FM 145.775 out / 145.175 in, CTCSS 88.5",Active (installed 3 Oct 2025),65.41127,-19.49982,920,,,Kathrein 2-dipole VHF,,High,ÍRA annual report 2026,Links planned to TF2RPJ and TF5RPD.
+ÍRA,"Perlan, Öskjuhlíð (Reykjavík)",TF3RVK,"70 cm FM 439.900 out / 432.900 in, CTCSS 88.5",Active (Nov 2025),64.129,-21.9187,,,,"25 W, 1/4-wave, Icom UR-FR6000",,Medium,Perlan building location,No height given; it's on/at Perlan on Öskjuhlíð (~60 m hill).
+ÍRA,Skeljanes (Reykjavík),TF3DMR,"70 cm DMR 439.850 / 434.850 (-5 MHz), CC1",Active (28 Aug 2025),64.1255,-21.94967,,,,"UHF antenna on club mast, duplexer",,High,ÍRA annual report (TF3IRA coords),Brandmeister ID 274002. Sources disagree on which frequency is the output.
+ÍRA,Skálafell,TF3RPK,2 m FM 145.575,QRT since 3 Nov 2023,64.23889,-21.46472,771,,,,,High,Same site as TF3RPA,Off air.
+ÍRA,Garður (Reykjanes),TF8RPH,2 m FM 145.725,"Off-air (RepeaterBook, last review 2017)",,,,,,,,None,,No coordinates published.
+ÍRA APRS,Búrfell,TF1APA,APRS digi 144.800,Active,64.0795,-19.8185,669,,,,,High,ÍRA annual report,
+ÍRA APRS,Reynisfjall,TF1APB,APRS digi 144.800,Active,63.41417,-19.02833,340,,,,,High,ÍRA annual report,
+ÍRA APRS,Landeyjar,TF1MT-1,APRS digi/iGate 144.800,Active,63.5845,-20.15133,,,,,,High,ÍRA annual report,
+ÍRA APRS,"Skeljanes, Reykjavík",TF3IRA-1,APRS 144.800,Active (Nov 2025),64.1255,-21.94967,,,,Diamond SX-200N,,High,ÍRA annual report,
+ÍRA APRS,"Hraunbær, Reykjavík",TF3RPF,APRS digi 144.800,Active,64.12,-21.8095,,,,,,High,ÍRA annual report,
+ÍRA APRS,Vaðlaheiði,TF5APA,APRS digi 144.800,Active,65.7425,-18.001,,,,,,High,ÍRA annual report,
+ÍRA APRS,"Kjarnaskógur, Akureyri",TF5SS,APRS iGate 144.800,Active,65.6475,-18.10633,,,,,,High,ÍRA annual report,
+ÍRA APRS,Þorbjarnarfell (Grindavík),TF8APA,APRS digi 144.800,Active,63.8643,-22.441,244,,,,,High,OSM summit (ÍRA gives 244 m),
+ÍRA APRS,Úlfljótsfjall,TF1SS-1,APRS digi 144.800,Active,,,248,,,,,None,,"Report's locator (IP14ej) doesn't match the name, so no coordinates given."
+F4x4,Drangajökull,Rás 44,"VHF repeater (duplex, commercial band)",Active,66.1512,-22.2595,,696,,,Y,Low,LMÍ glacier centroid,"Exact spot on/at the glacier unknown, so check the coordinates."
+F4x4,Svínárhnjúkur,Rás 46,"VHF repeater (duplex, commercial band)",Active,66.02483,-18.22559,,1031,,,Y,Medium,LMÍ name + DEM summit,
+F4x4,Vaðlaheiði,Rás 44,"VHF repeater (duplex, commercial band)",Active,65.73028,-18.00722,550,630,,,,Medium,Assumed same site as ÍRA TF5RPD,
+F4x4,Náttmálafjall,Rás 46,"VHF repeater (duplex, commercial band)",Active,65.41949,-13.76516,,656,,,Y,Medium,LMÍ name + DEM summit,Between Borgarfjörður eystri and Húsavík (east).
+F4x4,Tröllakirkja (Holtavörðuheiði),Rás 42,"VHF repeater (duplex, commercial band)",Active,65.00483,-21.18781,1001,980,,,Y,Medium,OSM summit,Ch 42 is owned by Ferðafélag Íslands; 4x4 members may use it.
+F4x4,Strútur,Rás 44,"VHF repeater (duplex, commercial band)",Active,64.749,-20.6813,937,921,,,,High,OSM summit (same peak as TF2RPJ),
+F4x4,Ásgarðsfjall (Kerlingarfjöll),Rás 44,"VHF repeater (duplex, commercial band)",Active,64.68074,-19.28229,929,911,,,,Medium,OSM summit,
+F4x4,Fjórðungsalda,Rás 44,"VHF repeater (duplex, commercial band)",Active,64.87494,-18.00694,976,958,,,,High,OSM summit; OSM mast 40 m away,
+F4x4,Hlöðufell,Rás 58,"VHF repeater (duplex, commercial band)",Active,64.41979,-20.53418,1186,1169,,,Y,High,OSM summit,
+F4x4,Bláfjöll,Rás 46,"VHF repeater (duplex, commercial band)",Active,63.97639,-21.635,690,683,,,,Medium,Assumed same site as ÍRA TF3RPB,
+F4x4,Reykjafjöll (by Hrafntinnusker),Rás 42,"VHF repeater (duplex, commercial band)",Active,63.92048,-19.13387,,1134,,,Y,Medium,LMÍ name + DEM summit,Map says 'Reykjafjall'; the one near Hrafntinnusker matches the map position. Ch 42 is FÍ's.
+Landsbjörg (SAR),Fannalágafjall,Rás 2,VHF repeater (SAR system),Active,66.39552,-22.5353,,,,,,Low,Estimated from map (±10 km),Not found in LMÍ or OSM place names.
+Landsbjörg (SAR),Snæfjall (Snæfjallaströnd),Rás 1,VHF repeater (SAR system),Active,66.1804,-22.79981,751,734,,,,Medium,OSM summit,
+Landsbjörg (SAR),Þverfjall (Breiðadalsheiði),Rás 4,VHF repeater (SAR system),Active,66.04257,-23.30457,,732,,,,Medium,OSM summit,Neyðarlínan telecom site.
+Landsbjörg (SAR),Háafell,Rás 3,VHF repeater (SAR system),Active,65.90943,-21.54397,,786,,,,Low,LMÍ name + DEM summit,Several Háafells; picked the one nearest the map dot.
+Landsbjörg (SAR),Hænuvíkurháls,Rás 1,VHF repeater (SAR system),Active,65.61416,-24.26723,,348,,,,Medium,OSM telecom mast on the pass,A forum user says the Landsbjörg map has this one placed wrong.
+Landsbjörg (SAR),Hornatær,Rás 2,VHF repeater (SAR system),Active,65.61392,-23.29236,,714,,,,Medium,LMÍ name + DEM summit,
+Landsbjörg (SAR),Skeggöxl,Rás 4,VHF repeater (SAR system),Active,65.26097,-21.99199,,803,,,,Medium,LMÍ name + DEM summit,
+Landsbjörg (SAR),Gufuskálar,Rás 3,VHF repeater (SAR system),Active,64.9073,-23.9224,,9,,,,Medium,OSM mast (412 m guyed mast),Repeater height on the mast isn't published; it could be high up.
+Landsbjörg (SAR),Geitlandsjökull,Rás 9,VHF repeater (SAR system),Active,64.59608,-20.60131,1390,1354,,,,Medium,OSM summit,Exact spot on/at the glacier unknown.
+Landsbjörg (SAR),Bláfell (Kjölur),Rás 3,VHF repeater (SAR system),Active,64.48827,-19.85835,1204,1164,,,,Medium,OSM summit,A 2021 forum post said it had been removed; it's back on the 2025 map.
+Landsbjörg (SAR),Skarðsheiði,Rás 2,VHF repeater (SAR system),INACTIVE,64.48051,-21.69075,,1028,,,,Low,LMÍ name + DEM summit,
+Landsbjörg (SAR),Bláfjöll,Rás 1,VHF repeater (SAR system),Active,63.97639,-21.635,690,683,,,,Medium,Assumed same site as ÍRA TF3RPB,
+Landsbjörg (SAR),Þorbjörn (Grindavík),Rás 9,VHF repeater (SAR system),INACTIVE,63.86399,-22.43745,229,205,,,,High,OSM telecom mast,
+Landsbjörg (SAR),Eyjafjallajökull,Rás 2,VHF repeater (SAR system),INACTIVE,63.6252,-19.5975,,1571,,,,Low,LMÍ glacier centroid,Exact spot unknown.
+Landsbjörg (SAR),Vestmannaeyjar,Rás 4,VHF repeater (SAR system),Active,63.44828,-20.28693,,68,,,,Low,Nearest OSM telecom mast on Heimaey,The repeater might be on Heimaklettur (283 m) or Stórhöfði instead.
+Landsbjörg (SAR),Hatta,Rás 3,VHF repeater (SAR system),Active,63.44,-19.00728,515,486,,,,Medium,LMÍ/OSM summit,Above Vík.
+Landsbjörg (SAR),Hjörleifshöfði,Rás 2,VHF repeater (SAR system),Active,63.41672,-18.74309,,215,,,,Medium,LMÍ name + DEM summit,
+Landsbjörg (SAR),Tindastóll,Rás 2,VHF repeater (SAR system),Active,65.8168,-19.75804,,995,,,,Medium,LMÍ ridge + DEM summit,
+Landsbjörg (SAR),Jörundarfell,Rás 2,VHF repeater (SAR system),Active,65.46553,-20.26057,1038,1013,,,,Medium,OSM summit,
+Landsbjörg (SAR),Mælifellshnjúkur,Rás 1,VHF repeater (SAR system),Active,65.3888,-19.35162,1147,1106,,,,Medium,OSM summit (Skagafjörður),
+Landsbjörg (SAR),Illviðrahnjúkur (Siglufjörður?),Rás 12,VHF repeater (SAR system),Active,66.04082,-18.96997,,,,,,Low,Estimated from map (±10 km),Probably the Illviðrishnjúkur above Siglufjörður; check the coordinates.
+Landsbjörg (SAR),Hestgarðsfjall,Rás 3,VHF repeater (SAR system),Active,66.03951,-18.82637,,,,,,Low,Estimated from map (±10 km),Not found in LMÍ/OSM names.
+Landsbjörg (SAR),Kerahnjúkur,Rás 4,VHF repeater (SAR system),Active,66.03894,-18.60231,,1026,,,,Medium,LMÍ name + DEM,
+Landsbjörg (SAR),Skíðadalur,Rás 9,VHF repeater (SAR system),Active,65.8157,-18.6133,,,,,,Low,LMÍ valley centroid,Map labels a valley; the actual mountain isn't known.
+Landsbjörg (SAR),Vaðlaheiði,Rás 1,VHF repeater (SAR system),Active,65.73028,-18.00722,550,630,,,,Medium,Assumed same site as ÍRA TF5RPD,
+Landsbjörg (SAR),Kerling (Eyjafjörður),Rás 3,VHF repeater (SAR system),Active,65.5574,-18.2539,1536,1535,,,,Medium,OSM summit,
+Landsbjörg (SAR),Húsavíkurfjall,Rás 1,VHF repeater (SAR system),INACTIVE,66.04599,-17.30355,417,402,,,,High,OSM tower on summit,
+Landsbjörg (SAR),Vesturdalur,Rás 2,VHF repeater (SAR system),INACTIVE,65.93073,-16.53809,,,,,,Low,Estimated from map (±10 km),Valley in Jökulsárgljúfur; exact spot unknown.
+Landsbjörg (SAR),Viðarfjall,Rás 2,VHF repeater (SAR system),Active,66.25998,-15.77665,,390,,,,Medium,LMÍ name + DEM summit,
+Landsbjörg (SAR),Gunnólfsvíkurfjall,Rás 3,VHF repeater (SAR system),Active,66.14373,-15.09063,719,717,,,,High,OSM summit,Former radar site.
+Landsbjörg (SAR),Dýjafjall,Rás 2,VHF repeater (SAR system),Active,65.74751,-14.42467,719,712,,,,Low,OSM summit,Map dot sits ~30 km further north; a forum user says the map has it placed wrong.
+Landsbjörg (SAR),Herðubreið,Rás 4,VHF repeater (SAR system),Active,65.17492,-16.3462,1682,,,,,Medium,OSM summit,"The DEM at 90 m reads only 1543 m on this steep peak, so use 1682."
+Landsbjörg (SAR),Gagnheiði,Rás 1,VHF repeater (SAR system),CHECK (see notes),65.22333,-14.258,,940,,,,Medium,OSM telecom mast,"One of Gagnheiði/Oddsskarð is red (inactive) on the map, and the labels make it ambiguous which."
+Landsbjörg (SAR),Oddsskarð,Rás 3,VHF repeater (SAR system),CHECK (see notes),65.0711,-13.8932,700,,,,,Low,OSM pass node,See Gagnheiði note. The pass is shown; the repeater may be on a nearby peak.
+Landsbjörg (SAR),Snæfell,Rás 3,VHF repeater (SAR system),INACTIVE,64.79652,-15.56252,1833,1798,,,,Medium,LMÍ + DEM summit,
+Landsbjörg (SAR),Sendill,Rás 2,VHF repeater (SAR system),INACTIVE,64.5905,-15.34219,,,,,,Low,Estimated from map (±10 km),A 2021 forum post said it had been removed.
+Landsbjörg (SAR),Kjarrdalsheiði,Rás 4,VHF repeater (SAR system),Active,64.51363,-15.1155,,697,,,,Low,LMÍ heath + DEM high point,
+Landsbjörg (SAR),Kaldárnúpur,Rás 3,VHF repeater (SAR system),Active,64.2513,-15.99136,,1372,,,,Medium,LMÍ name + DEM summit,
+Landsbjörg (SAR),Kristínartindar,Rás 4,VHF repeater (SAR system),Active,64.06926,-16.92611,1126,1059,,,,Medium,OSM summit,Skaftafell.
+Landsbjörg (SAR),Ingólfshöfði,Rás 4,VHF repeater (SAR system),Active,63.8017,-16.6366,,,,,,Medium,Lighthouse on the headland,
+Landsbjörg (SAR),Grímsfjall (Vatnajökull),Rás 3,VHF repeater (SAR system),Active,64.39657,-17.29959,,1672,,,,Medium,LMÍ name + DEM,Next to the Grímsvötn research huts.
+Landsbjörg (SAR),Skrokkalda,Rás 2,VHF repeater (SAR system),Active,64.55696,-18.37769,922,915,,,,High,OSM mast on summit,A 2021 forum post called it inactive; the 2025 map shows it as active.
+Landsbjörg (SAR),Vatnsfell,Rás 4,VHF repeater (SAR system),Active,64.19832,-18.97278,,718,,,,Medium,OSM telecom mast,A 2021 forum post called it inactive; the 2025 map shows it as active.
